@@ -1,4 +1,4 @@
-import { APICallMessage, ResponseMessage } from '../shared/types';
+import { APICallMessage, ResponseMessage, GoogleGenAIBridgeMessage, GoogleGenAIResponseMessage } from '../shared/types';
 
 interface PendingResponse {
   resolve: (value: unknown) => void;
@@ -36,6 +36,36 @@ window.addEventListener(
       chrome.runtime.sendMessage(apiMessage, (response: ResponseMessage) => {
         const resultMessage = {
           type: 'extension_api_response',
+          requestId,
+          result: (response.payload as any)?.result,
+          error: (response.payload as any)?.error,
+        };
+
+        window.postMessage(resultMessage, '*');
+
+        const pending = pendingResponses.get(requestId);
+        if (pending) {
+          clearTimeout(pending.timeout);
+          pendingResponses.delete(requestId);
+        }
+      });
+    }
+
+    if (message.type === 'googlegenai_execute') {
+      const requestId = generateRequestId();
+
+      const genaiMessage: GoogleGenAIBridgeMessage = {
+        type: 'googlegenai_execute',
+        payload: {
+          serializedInstance: message.serializedInstance,
+          command: message.command,
+        },
+        requestId,
+      };
+
+      chrome.runtime.sendMessage(genaiMessage, (response: GoogleGenAIResponseMessage) => {
+        const resultMessage = {
+          type: 'googlegenai_response',
           requestId,
           result: (response.payload as any)?.result,
           error: (response.payload as any)?.error,

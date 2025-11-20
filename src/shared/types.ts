@@ -39,3 +39,33 @@ export interface TabDataMessage extends ExtensionMessage {
     title?: string;
   };
 }
+
+// GoogleGenAI Extension Bridge Types
+export interface GoogleGenAIBridgeMessage extends ExtensionMessage {
+  type: 'googlegenai_execute';
+  payload: {
+    serializedInstance: string;
+    command: GoogleGenAICommand;
+  };
+}
+
+export interface GoogleGenAICommand {
+  type: 'generateImage' | 'generateContent' | 'generateText';
+  payload: {
+    images?: string[];
+    prompt: string;
+    aspectRatio?: string;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+  };
+}
+
+export interface GoogleGenAIResponseMessage extends ExtensionMessage {
+  type: 'googlegenai_response';
+  payload: {
+    requestId: string;
+    result?: unknown;
+    error?: string;
+  };
+}

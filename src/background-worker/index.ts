@@ -13,10 +13,11 @@ const generateRequestId = (): string => {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-// GoogleGenAI Command Handler
-const handleGoogleGenAICommand = async (command: GoogleGenAICommand, apiKey: string): Promise<unknown> => {
+// GoogleGenAI Command Handler - executes with serialized instance from web app
+const handleGoogleGenAICommand = async (command: GoogleGenAICommand, serializedInstance: string): Promise<unknown> => {
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
+    // Reconstruct GoogleGenAI instance from serialized data
+    const genAI = reconstructGoogleGenAI(serializedInstance);
     
     switch (command.type) {
       case 'generateImage':
@@ -30,6 +31,20 @@ const handleGoogleGenAICommand = async (command: GoogleGenAICommand, apiKey: str
     }
   } catch (error) {
     throw error instanceof Error ? error : new Error(String(error));
+  }
+};
+
+// Reconstruct GoogleGenAI instance from serialized data
+const reconstructGoogleGenAI = (serializedInstance: string): GoogleGenerativeAI => {
+  try {
+    // Parse the serialized instance data
+    const instanceData = JSON.parse(serializedInstance);
+    
+    // Reconstruct the GoogleGenerativeAI instance
+    // Note: We only need the API key from the web app
+    return new GoogleGenerativeAI(instanceData.apiKey);
+  } catch (error) {
+    throw new Error('Failed to reconstruct GoogleGenAI instance from web app data');
   }
 };
 
@@ -173,10 +188,10 @@ chrome.runtime.onMessage.addListener(
 
     if (message.type === 'googlegenai_execute') {
       const genaiMessage = message as GoogleGenAIBridgeMessage;
-      const { apiKey, command } = genaiMessage.payload;
+      const { serializedInstance, command } = genaiMessage.payload;
       const requestId = genaiMessage.requestId || generateRequestId();
 
-      handleGoogleGenAICommand(command, apiKey)
+      handleGoogleGenAICommand(command, serializedInstance)
         .then((result) => {
           const response: GoogleGenAIResponseMessage = {
             type: 'googlegenai_response',

@@ -6,10 +6,14 @@ This Chrome extension provides a bridge for web applications to execute Google G
 
 The implementation follows a **generic execution bridge** pattern where:
 
-1. **Web Application** - Initializes GoogleGenAI and sends commands to the extension
-2. **Extension Bridge** - Routes commands to the background service worker
-3. **Background Worker** - Executes GoogleGenAI operations with proper API keys
+1. **Web Application** - Initializes GoogleGenAI and passes the instance to the extension
+2. **Extension Bridge** - Serializes the GoogleGenAI instance and routes commands to the background service worker
+3. **Background Worker** - Reconstructs the GoogleGenAI instance and executes operations
 4. **Response** - Results are returned back to the web application
+
+## Key Change: Web App Initialization
+
+**Important**: GoogleGenAI is now initialized in the web application, not in the Chrome extension. The web app creates the GoogleGenAI instance and passes it to the extension for execution.
 
 ## Installation & Setup
 
@@ -35,14 +39,29 @@ The implementation follows a **generic execution bridge** pattern where:
 
 The extension bridge is available at `window.__chromeExtensionBridge` once the page loads and the content script is injected.
 
+### Step 1: Initialize GoogleGenAI in Web App
+
+```html
+<!-- Include GoogleGenerativeAI library -->
+<script src="https://cdn.jsdelivr.net/npm/@google/generative-ai@0.24.1/dist/generative-ai.min.js"></script>
+
+<script>
+// Initialize GoogleGenAI in your web application
+const googleGenAI = new GoogleGenerativeAI('YOUR_API_KEY');
+
+// Store API key in instance for serialization
+googleGenAI.apiKey = 'YOUR_API_KEY';
+</script>
+```
+
 ### API Methods
 
-#### `execute(apiKey, command)`
+#### `execute(googleGenAI, command)`
 
-Executes a GoogleGenAI command through the extension.
+Executes a GoogleGenAI command through the extension using a GoogleGenAI instance from the web app.
 
 **Parameters:**
-- `apiKey` (string): Your Google AI API key
+- `googleGenAI` (object): The GoogleGenAI instance created in the web app
 - `command` (object): Command object with type and payload
 
 **Returns:** Promise with the result
@@ -53,7 +72,7 @@ Executes a GoogleGenAI command through the extension.
 
 ```typescript
 const result = await window.__chromeExtensionBridge.execute(
-  'YOUR_API_KEY',
+  googleGenAIInstance,
   {
     type: 'generateImage',
     payload: {
@@ -78,7 +97,7 @@ const result = await window.__chromeExtensionBridge.execute(
 
 ```typescript
 const result = await window.__chromeExtensionBridge.execute(
-  'YOUR_API_KEY',
+  googleGenAIInstance,
   {
     type: 'generateContent',
     payload: {
@@ -104,7 +123,7 @@ const result = await window.__chromeExtensionBridge.execute(
 
 ```typescript
 const result = await window.__chromeExtensionBridge.execute(
-  'YOUR_API_KEY',
+  googleGenAIInstance,
   {
     type: 'generateText',
     payload: {
@@ -132,30 +151,36 @@ const result = await window.__chromeExtensionBridge.execute(
 <html>
 <head>
     <title>GoogleGenAI Extension Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@google/generative-ai@0.24.1/dist/generative-ai.min.js"></script>
 </head>
 <body>
     <div>
         <input type="password" id="apiKey" placeholder="Google AI API Key">
+        <button onclick="initializeGoogleGenAI()">Initialize</button>
         <textarea id="prompt" placeholder="Enter your prompt..."></textarea>
-        <button onclick="generateImage()">Generate Image</button>
-        <button onclick="generateText()">Generate Text</button>
+        <button onclick="generateImage()" disabled>Generate Image</button>
+        <button onclick="generateText()" disabled>Generate Text</button>
         <div id="results"></div>
     </div>
 
     <script>
-        function waitForBridge(callback) {
-            if (window.__chromeExtensionBridge) {
-                callback();
-            } else {
-                setTimeout(() => waitForBridge(callback), 100);
-            }
+        let googleGenAIInstance = null;
+
+        function initializeGoogleGenAI() {
+            const apiKey = document.getElementById('apiKey').value;
+            
+            // Initialize GoogleGenAI in web app
+            googleGenAIInstance = new GoogleGenerativeAI(apiKey);
+            googleGenAIInstance.apiKey = apiKey;
+            
+            // Enable buttons
+            document.querySelectorAll('button[disabled]').forEach(btn => btn.disabled = false);
         }
 
         function generateImage() {
-            const apiKey = document.getElementById('apiKey').value;
             const prompt = document.getElementById('prompt').value;
 
-            window.__chromeExtensionBridge.execute(apiKey, {
+            window.__chromeExtensionBridge.execute(googleGenAIInstance, {
                 type: 'generateImage',
                 payload: { prompt }
             }).then(result => {
@@ -170,10 +195,9 @@ const result = await window.__chromeExtensionBridge.execute(
         }
 
         function generateText() {
-            const apiKey = document.getElementById('apiKey').value;
             const prompt = document.getElementById('prompt').value;
 
-            window.__chromeExtensionBridge.execute(apiKey, {
+            window.__chromeExtensionBridge.execute(googleGenAIInstance, {
                 type: 'generateText',
                 payload: { prompt }
             }).then(result => {
@@ -188,6 +212,14 @@ const result = await window.__chromeExtensionBridge.execute(
         }
 
         // Wait for bridge to be available
+        function waitForBridge(callback) {
+            if (window.__chromeExtensionBridge) {
+                callback();
+            } else {
+                setTimeout(() => waitForBridge(callback), 100);
+            }
+        }
+
         waitForBridge(() => {
             console.log('GoogleGenAI Extension Bridge is ready!');
         });
@@ -196,21 +228,32 @@ const result = await window.__chromeExtensionBridge.execute(
 </html>
 ```
 
-## Security Considerations
+## Architecture Details
 
-1. **API Key Management**: The web application sends the API key to the extension. The extension doesn't store the key permanently.
+### Instance Serialization
 
-2. **Content Security**: The extension validates all incoming commands before execution.
+The web app's GoogleGenAI instance is serialized and transmitted to the extension:
 
-3. **Isolation**: All GoogleGenAI operations happen in the extension's background service worker, isolated from the web page.
+1. **Web App**: Creates GoogleGenAI instance and stores API key
+2. **Serialization**: Extracts API key and creates JSON representation
+3. **Transmission**: Sends serialized instance to extension via message passing
+4. **Reconstruction**: Extension reconstructs GoogleGenAI instance from API key
+5. **Execution**: Uses reconstructed instance to make API calls
 
-## Error Handling
+### Security Considerations
+
+1. **API Key Management**: The web app manages the API key and passes it securely to the extension
+2. **Instance Isolation**: Each web app maintains its own GoogleGenAI instance
+3. **Content Security**: The extension validates all incoming commands before execution
+4. **Temporary Storage**: API keys are not permanently stored in the extension
+
+### Error Handling
 
 The bridge provides structured error responses:
 
 ```typescript
 try {
-    const result = await window.__chromeExtensionBridge.execute(apiKey, command);
+    const result = await window.__chromeExtensionBridge.execute(googleGenAIInstance, command);
     // Handle success
 } catch (error) {
     // Handle errors
@@ -219,6 +262,7 @@ try {
 ```
 
 Common errors:
+- GoogleGenAI instance not initialized
 - Invalid API key
 - Network issues
 - Invalid prompt format
@@ -235,9 +279,9 @@ Common errors:
 
 ### Message Flow
 
-1. **Web Page** → `postMessage` → **Content Script**
+1. **Web Page** → `postMessage` with GoogleGenAI instance → **Content Script**
 2. **Content Script** → `chrome.runtime.sendMessage` → **Background Worker**
-3. **Background Worker** → GoogleGenAI API
+3. **Background Worker** → Reconstructs GoogleGenAI instance → GoogleGenAI API
 4. **Background Worker** → Response → **Content Script**
 5. **Content Script** → `postMessage` → **Web Page**
 
@@ -248,10 +292,10 @@ src/
 ├── shared/
 │   └── types.ts          # TypeScript interfaces for messages
 ├── background-worker/
-│   └── index.ts          # GoogleGenAI execution logic
+│   └── index.ts          # GoogleGenAI reconstruction and execution
 ├── content-script/
 │   ├── index.ts          # Message routing
-│   └── injected-script.ts # Web page bridge interface
+│   └── injected-script.ts # Web page bridge interface and serialization
 └── manifest.json         # Extension permissions
 ```
 
@@ -262,6 +306,7 @@ src/
 - **Timeout Management**: 30-second timeout for AI operations
 - **Multiple Models**: Support for different GoogleGenAI models
 - **Image Support**: Base64 image handling for multimodal operations
+- **Instance Management**: Web app controls GoogleGenAI initialization
 - **Extensible**: Easy to add new command types
 
 ## Testing
@@ -270,8 +315,9 @@ Use the provided `google-genai-test.html` file to test the implementation:
 
 1. Open the test page in Chrome
 2. Enter your Google AI API key
-3. Try generating images and text
-4. Check browser console for debugging information
+3. Click "Initialize GoogleGenAI"
+4. Try generating images and text
+5. Check browser console for debugging information
 
 ## API Key Requirements
 
@@ -279,7 +325,7 @@ Get your API key from:
 1. [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
 3. Enable the Generative Language API
-4. Use the key in your web application
+4. Use the key to initialize GoogleGenAI in your web application
 
 ## Rate Limits & Quotas
 

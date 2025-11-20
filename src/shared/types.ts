@@ -44,7 +44,7 @@ export interface TabDataMessage extends ExtensionMessage {
 export interface GoogleGenAIBridgeMessage extends ExtensionMessage {
   type: 'googlegenai_execute';
   payload: {
-    apiKey: string;
+    serializedInstance: string;
     command: GoogleGenAICommand;
   };
 }

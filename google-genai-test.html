@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GoogleGenAI Extension Bridge Test</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@google/generative-ai@0.24.1/dist/generative-ai.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-8">
     <div class="max-w-4xl mx-auto">
@@ -22,7 +23,14 @@
                     placeholder="Enter your Google AI API key"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
+                <button 
+                    id="initializeBtn"
+                    class="mt-2 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                    Initialize GoogleGenAI
+                </button>
             </div>
+            <div id="status" class="text-sm text-gray-600"></div>
         </div>
 
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -54,7 +62,8 @@
             </div>
             <button 
                 id="generateImageBtn"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
                 Generate Image
             </button>
@@ -75,7 +84,8 @@
             </div>
             <button 
                 id="generateTextBtn"
-                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                disabled
+                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
                 Generate Text
             </button>
@@ -90,6 +100,8 @@
     </div>
 
     <script>
+        let googleGenAIInstance = null;
+
         // Wait for the extension bridge to be available
         function waitForBridge(callback) {
             if (window.__chromeExtensionBridge) {
@@ -126,26 +138,58 @@
             resultsDiv.appendChild(resultDiv);
         }
 
-        function getImageDataUrl(imgElement) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = imgElement.naturalWidth;
-            canvas.height = imgElement.naturalHeight;
-            ctx.drawImage(imgElement, 0, 0);
-            return canvas.toDataURL('image/png').split(',')[1];
+        function updateStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `text-sm ${isError ? 'text-red-600' : 'text-green-600'}`;
+            statusDiv.textContent = message;
+        }
+
+        function enableButtons() {
+            document.getElementById('generateImageBtn').disabled = false;
+            document.getElementById('generateTextBtn').disabled = false;
+        }
+
+        function disableButtons() {
+            document.getElementById('generateImageBtn').disabled = true;
+            document.getElementById('generateTextBtn').disabled = true;
         }
 
         waitForBridge(() => {
             console.log('GoogleGenAI Extension Bridge is available!');
 
+            // Initialize GoogleGenAI button
+            document.getElementById('initializeBtn').addEventListener('click', () => {
+                const apiKey = document.getElementById('apiKey').value;
+
+                if (!apiKey) {
+                    updateStatus('Please enter your Google AI API key', true);
+                    return;
+                }
+
+                try {
+                    // Initialize GoogleGenAI in the web app
+                    googleGenAIInstance = new GoogleGenerativeAI(apiKey);
+                    
+                    // Store the API key in the instance for serialization
+                    googleGenAIInstance.apiKey = apiKey;
+                    
+                    updateStatus('GoogleGenAI initialized successfully!');
+                    enableButtons();
+                    
+                    addResult('Initialization', 'GoogleGenAI instance created in web app and ready for use');
+                } catch (error) {
+                    updateStatus(`Failed to initialize GoogleGenAI: ${error.message}`, true);
+                    addResult('Initialization Error', error.message, true);
+                }
+            });
+
             // Generate Image button
             document.getElementById('generateImageBtn').addEventListener('click', async () => {
-                const apiKey = document.getElementById('apiKey').value;
                 const prompt = document.getElementById('imagePrompt').value;
                 const aspectRatio = document.getElementById('aspectRatio').value;
 
-                if (!apiKey) {
-                    addResult('Error', 'Please enter your Google AI API key', true);
+                if (!googleGenAIInstance) {
+                    addResult('Error', 'Please initialize GoogleGenAI first', true);
                     return;
                 }
 
@@ -157,13 +201,16 @@
                 try {
                     addResult('Generating Image...', 'Please wait, this may take a moment...');
 
-                    const result = await window.__chromeExtensionBridge.execute(apiKey, {
-                        type: 'generateImage',
-                        payload: {
-                            prompt,
-                            aspectRatio
+                    const result = await window.__chromeExtensionBridge.execute(
+                        googleGenAIInstance,
+                        {
+                            type: 'generateImage',
+                            payload: {
+                                prompt,
+                                aspectRatio
+                            }
                         }
-                    });
+                    );
 
                     console.log('Image generation result:', result);
 
@@ -216,11 +263,10 @@
 
             // Generate Text button
             document.getElementById('generateTextBtn').addEventListener('click', async () => {
-                const apiKey = document.getElementById('apiKey').value;
                 const prompt = document.getElementById('textPrompt').value;
 
-                if (!apiKey) {
-                    addResult('Error', 'Please enter your Google AI API key', true);
+                if (!googleGenAIInstance) {
+                    addResult('Error', 'Please initialize GoogleGenAI first', true);
                     return;
                 }
 
@@ -232,12 +278,15 @@
                 try {
                     addResult('Generating Text...', 'Please wait, this may take a moment...');
 
-                    const result = await window.__chromeExtensionBridge.execute(apiKey, {
-                        type: 'generateText',
-                        payload: {
-                            prompt
+                    const result = await window.__chromeExtensionBridge.execute(
+                        googleGenAIInstance,
+                        {
+                            type: 'generateText',
+                            payload: {
+                                prompt
+                            }
                         }
-                    });
+                    );
 
                     console.log('Text generation result:', result);
 

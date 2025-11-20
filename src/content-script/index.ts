@@ -57,7 +57,7 @@ window.addEventListener(
       const genaiMessage: GoogleGenAIBridgeMessage = {
         type: 'googlegenai_execute',
         payload: {
-          apiKey: message.apiKey,
+          serializedInstance: message.serializedInstance,
           command: message.command,
         },
         requestId,

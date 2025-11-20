@@ -6,6 +6,7 @@ A fully-featured Chrome extension built with **React**, **TypeScript**, **Tailwi
 
 - **Side Panel Interface**: Beautiful React-powered side panel that displays extension status and activity logs
 - **Bi-directional Communication Bridge**: Seamless message passing between web pages and the extension
+- **GoogleGenAI Image Generation**: Securely call Google's Gemini image APIs via the extension bridge
 - **Content Script Layer**: Injects a communication bridge into web pages for secure API access
 - **Background Service Worker**: Handles Chrome API calls on behalf of web pages
 - **TypeScript Support**: Full type safety with TypeScript interfaces for all message structures
@@ -91,6 +92,27 @@ if (window.__chromeExtensionBridge) {
   );
 }
 ```
+
+### GoogleGenAI Image Generation
+
+Generate images using Google's Gemini API:
+
+```javascript
+const result = await window.__chromeExtensionBridge.googleGenAI.generateImage({
+  apiKey: 'YOUR_GOOGLE_AI_API_KEY',
+  images: [],  // Optional reference images as base64 or data URLs
+  prompt: 'A beautiful sunset over mountains',
+  aspectRatio: '16:9'  // Options: "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"
+});
+
+if (result.success) {
+  const img = document.createElement('img');
+  img.src = `data:${result.mimeType};base64,${result.imageData}`;
+  document.body.appendChild(img);
+}
+```
+
+For detailed documentation on GoogleGenAI integration, see [GOOGLEGENAI_INTEGRATION.md](./GOOGLEGENAI_INTEGRATION.md).
 
 ### Message Types
 
@@ -193,7 +215,8 @@ When running in dev mode, changes to source files will trigger a rebuild. You ma
 - **API Isolation**: Content scripts cannot directly access Chrome APIs
 - **Error Handling**: Errors are caught and reported without exposing sensitive information
 - **Request IDs**: All async operations use request IDs to prevent response mixing
-- **Timeout Protection**: API calls have a 5-second timeout to prevent hanging
+- **API Key Handling**: GoogleGenAI API keys are provided per request and never persisted by the extension
+- **Timeout Protection**: Standard Chrome API calls have a 5-second timeout, while GoogleGenAI image generation requests have a 60-second timeout to accommodate longer processing
 
 ## 📦 Build Output
 

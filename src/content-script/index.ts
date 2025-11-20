@@ -1,4 +1,9 @@
-import { APICallMessage, ResponseMessage } from '../shared/types';
+import { 
+  APICallMessage, 
+  ResponseMessage,
+  GoogleGenAIMessage,
+  GoogleGenAIResponseMessage
+} from '../shared/types';
 
 interface PendingResponse {
   resolve: (value: unknown) => void;
@@ -48,6 +53,27 @@ window.addEventListener(
           clearTimeout(pending.timeout);
           pendingResponses.delete(requestId);
         }
+      });
+    }
+
+    if (message.type === 'googlegenai_generate_image_request') {
+      const requestId = message.requestId || generateRequestId();
+
+      const googleMessage: GoogleGenAIMessage = {
+        type: 'googlegenai_generate_image',
+        payload: message.payload,
+        requestId,
+      };
+
+      chrome.runtime.sendMessage(googleMessage, (response: GoogleGenAIResponseMessage) => {
+        const responsePayload = response?.payload;
+        const genAIResultMessage = {
+          type: 'googlegenai_response',
+          requestId,
+          result: responsePayload,
+        };
+
+        window.postMessage(genAIResultMessage, '*');
       });
     }
   },

@@ -39,3 +39,29 @@ export interface TabDataMessage extends ExtensionMessage {
     title?: string;
   };
 }
+
+export interface GenerateImageRequest {
+  apiKey: string;
+  images: string[]; // Base64 encoded images or URLs
+  prompt: string;
+  aspectRatio: string; // e.g., "16:9", "1:1", "9:16"
+}
+
+export interface GenerateImageResponse {
+  success: boolean;
+  imageData?: string; // Base64 encoded generated image
+  mimeType?: string;
+  error?: string;
+}
+
+export interface GoogleGenAIMessage extends ExtensionMessage {
+  type: 'googlegenai_generate_image';
+  payload: GenerateImageRequest;
+}
+
+export interface GoogleGenAIResponseMessage extends ExtensionMessage {
+  type: 'googlegenai_response';
+  payload: GenerateImageResponse & {
+    requestId: string;
+  };
+}

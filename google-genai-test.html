@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoogleGenAI Extension Bridge Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">GoogleGenAI Extension Bridge Test</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Configuration</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Google AI API Key
+                </label>
+                <input 
+                    type="password" 
+                    id="apiKey" 
+                    placeholder="Enter your Google AI API key"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Generate Image</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt
+                </label>
+                <textarea 
+                    id="imagePrompt" 
+                    rows="3"
+                    placeholder="A beautiful sunset over mountains with vibrant colors"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                ></textarea>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Aspect Ratio
+                </label>
+                <select 
+                    id="aspectRatio"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="1:1">1:1 (Square)</option>
+                    <option value="16:9" selected>16:9 (Widescreen)</option>
+                    <option value="9:16">9:16 (Portrait)</option>
+                    <option value="4:3">4:3 (Standard)</option>
+                </select>
+            </div>
+            <button 
+                id="generateImageBtn"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                Generate Image
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Generate Text</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Prompt
+                </label>
+                <textarea 
+                    id="textPrompt" 
+                    rows="3"
+                    placeholder="Write a short story about a robot discovering emotions"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                ></textarea>
+            </div>
+            <button 
+                id="generateTextBtn"
+                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+                Generate Text
+            </button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Results</h2>
+            <div id="results" class="space-y-4">
+                <p class="text-gray-500">Results will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Wait for the extension bridge to be available
+        function waitForBridge(callback) {
+            if (window.__chromeExtensionBridge) {
+                callback();
+            } else {
+                setTimeout(() => waitForBridge(callback), 100);
+            }
+        }
+
+        function addResult(type, content, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `p-4 rounded-md ${isError ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-200'}`;
+            
+            const title = document.createElement('h3');
+            title.className = 'font-semibold mb-2';
+            title.textContent = type;
+            
+            const contentDiv = document.createElement('div');
+            if (typeof content === 'object') {
+                contentDiv.innerHTML = `<pre>${JSON.stringify(content, null, 2)}</pre>`;
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            resultDiv.appendChild(title);
+            resultDiv.appendChild(contentDiv);
+            
+            // Clear the placeholder text if this is the first result
+            if (resultsDiv.firstChild?.textContent === 'Results will appear here...') {
+                resultsDiv.innerHTML = '';
+            }
+            
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function getImageDataUrl(imgElement) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = imgElement.naturalWidth;
+            canvas.height = imgElement.naturalHeight;
+            ctx.drawImage(imgElement, 0, 0);
+            return canvas.toDataURL('image/png').split(',')[1];
+        }
+
+        waitForBridge(() => {
+            console.log('GoogleGenAI Extension Bridge is available!');
+
+            // Generate Image button
+            document.getElementById('generateImageBtn').addEventListener('click', async () => {
+                const apiKey = document.getElementById('apiKey').value;
+                const prompt = document.getElementById('imagePrompt').value;
+                const aspectRatio = document.getElementById('aspectRatio').value;
+
+                if (!apiKey) {
+                    addResult('Error', 'Please enter your Google AI API key', true);
+                    return;
+                }
+
+                if (!prompt) {
+                    addResult('Error', 'Please enter a prompt for image generation', true);
+                    return;
+                }
+
+                try {
+                    addResult('Generating Image...', 'Please wait, this may take a moment...');
+
+                    const result = await window.__chromeExtensionBridge.execute(apiKey, {
+                        type: 'generateImage',
+                        payload: {
+                            prompt,
+                            aspectRatio
+                        }
+                    });
+
+                    console.log('Image generation result:', result);
+
+                    if (result.success && result.images && result.images.length > 0) {
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'p-4 bg-green-50 border border-green-200 rounded-md';
+                        
+                        const title = document.createElement('h3');
+                        title.className = 'font-semibold mb-2 text-green-800';
+                        title.textContent = 'Image Generated Successfully';
+                        
+                        const imagesContainer = document.createElement('div');
+                        imagesContainer.className = 'space-y-2';
+                        
+                        result.images.forEach((imageData, index) => {
+                            const imgContainer = document.createElement('div');
+                            imgContainer.className = 'mb-2';
+                            
+                            const img = document.createElement('img');
+                            img.src = `data:image/png;base64,${imageData}`;
+                            img.className = 'max-w-full h-auto rounded-md border border-gray-300';
+                            img.alt = `Generated image ${index + 1}`;
+                            
+                            imgContainer.appendChild(img);
+                            imagesContainer.appendChild(imgContainer);
+                        });
+
+                        if (result.text) {
+                            const textDiv = document.createElement('div');
+                            textDiv.className = 'mt-4 p-3 bg-white rounded-md';
+                            textDiv.innerHTML = '<strong>Generated Text:</strong><br>' + result.text;
+                            imagesContainer.appendChild(textDiv);
+                        }
+                        
+                        resultDiv.appendChild(title);
+                        resultDiv.appendChild(imagesContainer);
+                        
+                        const resultsDiv = document.getElementById('results');
+                        if (resultsDiv.firstChild?.textContent === 'Results will appear here...') {
+                            resultsDiv.innerHTML = '';
+                        }
+                        resultsDiv.appendChild(resultDiv);
+                    } else {
+                        addResult('Image Generation', result);
+                    }
+                } catch (error) {
+                    addResult('Image Generation Error', error.message, true);
+                }
+            });
+
+            // Generate Text button
+            document.getElementById('generateTextBtn').addEventListener('click', async () => {
+                const apiKey = document.getElementById('apiKey').value;
+                const prompt = document.getElementById('textPrompt').value;
+
+                if (!apiKey) {
+                    addResult('Error', 'Please enter your Google AI API key', true);
+                    return;
+                }
+
+                if (!prompt) {
+                    addResult('Error', 'Please enter a prompt for text generation', true);
+                    return;
+                }
+
+                try {
+                    addResult('Generating Text...', 'Please wait, this may take a moment...');
+
+                    const result = await window.__chromeExtensionBridge.execute(apiKey, {
+                        type: 'generateText',
+                        payload: {
+                            prompt
+                        }
+                    });
+
+                    console.log('Text generation result:', result);
+
+                    if (result.success) {
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'p-4 bg-green-50 border border-green-200 rounded-md';
+                        
+                        const title = document.createElement('h3');
+                        title.className = 'font-semibold mb-2 text-green-800';
+                        title.textContent = 'Text Generated Successfully';
+                        
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'p-3 bg-white rounded-md whitespace-pre-wrap';
+                        textDiv.textContent = result.text;
+                        
+                        resultDiv.appendChild(title);
+                        resultDiv.appendChild(textDiv);
+                        
+                        const resultsDiv = document.getElementById('results');
+                        if (resultsDiv.firstChild?.textContent === 'Results will appear here...') {
+                            resultsDiv.innerHTML = '';
+                        }
+                        resultsDiv.appendChild(resultDiv);
+                    } else {
+                        addResult('Text Generation', result);
+                    }
+                } catch (error) {
+                    addResult('Text Generation Error', error.message, true);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

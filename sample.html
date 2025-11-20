@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chrome Extension Bridge - Sample Page</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+          'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 100%;
+        padding: 40px;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 30px;
+      }
+
+      .info-box {
+        background: #f0f4ff;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        color: #333;
+        line-height: 1.6;
+      }
+
+      .demo-section {
+        margin-bottom: 30px;
+      }
+
+      .demo-section h2 {
+        color: #333;
+        font-size: 16px;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        flex: 1;
+        min-width: 150px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background: #e0e0e0;
+      }
+
+      .output-box {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        min-height: 100px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 10px;
+        border: 1px solid #333;
+      }
+
+      .output-box.error {
+        color: #ff6b6b;
+      }
+
+      .output-line {
+        margin-bottom: 5px;
+        word-break: break-all;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+
+      .status-indicator.active {
+        background: #4caf50;
+        animation: pulse 2s infinite;
+      }
+
+      .status-indicator.inactive {
+        background: #999;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .code-snippet {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 10px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        overflow-x: auto;
+        color: #333;
+        line-height: 1.4;
+      }
+
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #f0f0f0;
+        font-size: 12px;
+        color: #999;
+        text-align: center;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid #667eea;
+        border-radius: 50%;
+        border-top: 2px solid transparent;
+        animation: spin 0.6s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔌 Chrome Extension Bridge</h1>
+      <p class="subtitle">Interactive Demo - Test the Communication Bridge</p>
+
+      <div class="info-box">
+        <strong>Status:</strong>
+        <span class="status-indicator inactive" id="statusIndicator"></span>
+        <span id="statusText">Initializing...</span>
+      </div>
+
+      <div class="demo-section">
+        <h2>📋 Tab Information</h2>
+        <div class="button-group">
+          <button class="btn-primary" onclick="getTabInfo()">Get Current Tab Info</button>
+          <button class="btn-secondary" onclick="clearOutput()">Clear Output</button>
+        </div>
+        <div class="output-box" id="tabOutput">
+          <div class="output-line">// Output will appear here</div>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>🌐 Window Information</h2>
+        <div class="button-group">
+          <button class="btn-primary" onclick="getWindowInfo()">Get Window Info</button>
+        </div>
+        <div class="output-box" id="windowOutput">
+          <div class="output-line">// Output will appear here</div>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>💾 Storage API Demo</h2>
+        <div class="button-group">
+          <button class="btn-primary" onclick="storageDemo()">Save to Storage</button>
+          <button class="btn-secondary" onclick="storageRetrieve()">Retrieve from Storage</button>
+        </div>
+        <div class="output-box" id="storageOutput">
+          <div class="output-line">// Storage operations will appear here</div>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>📡 Bridge Status</h2>
+        <div class="button-group">
+          <button class="btn-primary" onclick="checkBridgeStatus()">Check Bridge Status</button>
+        </div>
+        <div class="output-box" id="statusOutput">
+          <div class="output-line">// Bridge status will appear here</div>
+        </div>
+        <div class="code-snippet">
+          <strong>How to use the bridge:</strong><br />
+          <br />
+          <code
+            >const result = await window.__chromeExtensionBridge.call('tabs', 'query', {active:
+            true});</code
+          >
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>
+          This demo page shows how web pages can communicate with the Chrome extension through the
+          bridge.
+        </p>
+        <p>Check your browser console for detailed logs.</p>
+      </div>
+    </div>
+
+    <script>
+      function addOutput(elementId, message, isError = false) {
+        const output = document.getElementById(elementId);
+        const line = document.createElement('div');
+        line.className = 'output-line';
+        line.textContent = message;
+
+        if (isError) {
+          output.classList.add('error');
+        } else {
+          output.classList.remove('error');
+        }
+
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function clearOutput(elementId = 'tabOutput') {
+        document.getElementById(elementId).innerHTML = '<div class="output-line">// Output cleared</div>';
+      }
+
+      function showLoading(elementId) {
+        const output = document.getElementById(elementId);
+        output.innerHTML = '<div class="output-line"><span class="loading"></span> Loading...</div>';
+      }
+
+      function updateStatus(active, message) {
+        const indicator = document.getElementById('statusIndicator');
+        const text = document.getElementById('statusText');
+
+        if (active) {
+          indicator.classList.remove('inactive');
+          indicator.classList.add('active');
+        } else {
+          indicator.classList.remove('active');
+          indicator.classList.add('inactive');
+        }
+
+        text.textContent = message;
+      }
+
+      function checkBridgeStatus() {
+        showLoading('statusOutput');
+        document.getElementById('statusOutput').innerHTML = '';
+
+        if (typeof window.__chromeExtensionBridge !== 'undefined') {
+          updateStatus(true, 'Bridge is active and ready');
+          addOutput('statusOutput', '✅ Chrome Extension Bridge is available');
+          addOutput('statusOutput', 'Interface: window.__chromeExtensionBridge');
+          addOutput('statusOutput', 'Method: call(namespace, method, ...args)');
+          addOutput('statusOutput', '');
+          addOutput('statusOutput', 'Example: window.__chromeExtensionBridge.call("tabs", "query", {})');
+        } else {
+          updateStatus(false, 'Waiting for bridge...');
+          addOutput('statusOutput', '❌ Bridge not yet available', true);
+          addOutput('statusOutput', 'Make sure the extension is enabled', true);
+        }
+      }
+
+      async function getTabInfo() {
+        showLoading('tabOutput');
+        document.getElementById('tabOutput').innerHTML = '';
+
+        try {
+          if (!window.__chromeExtensionBridge) {
+            throw new Error('Extension bridge not available');
+          }
+
+          const tabs = await window.__chromeExtensionBridge.call('tabs', 'query', {
+            active: true,
+            currentWindow: true,
+          });
+
+          addOutput('tabOutput', JSON.stringify(tabs, null, 2));
+          addOutput('tabOutput', '');
+          addOutput('tabOutput', '✅ Successfully retrieved tab information');
+        } catch (error) {
+          addOutput('tabOutput', `❌ Error: ${error.message}`, true);
+        }
+      }
+
+      function getWindowInfo() {
+        showLoading('windowOutput');
+        document.getElementById('windowOutput').innerHTML = '';
+
+        try {
+          const info = {
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform,
+            screenWidth: window.innerWidth,
+            screenHeight: window.innerHeight,
+            url: window.location.href,
+            title: document.title,
+          };
+
+          addOutput('windowOutput', JSON.stringify(info, null, 2));
+        } catch (error) {
+          addOutput('windowOutput', `❌ Error: ${error.message}`, true);
+        }
+      }
+
+      async function storageDemo() {
+        showLoading('storageOutput');
+        document.getElementById('storageOutput').innerHTML = '';
+
+        try {
+          if (!window.__chromeExtensionBridge) {
+            throw new Error('Extension bridge not available');
+          }
+
+          const data = {
+            demo: 'Chrome Extension Bridge',
+            timestamp: new Date().toISOString(),
+            message: 'Hello from the demo page!',
+          };
+
+          await window.__chromeExtensionBridge.call('storage', 'local', 'set', data);
+
+          addOutput('storageOutput', JSON.stringify(data, null, 2));
+          addOutput('storageOutput', '');
+          addOutput('storageOutput', '✅ Data saved to storage');
+        } catch (error) {
+          addOutput('storageOutput', `⚠️ Storage API call: ${error.message}`, true);
+        }
+      }
+
+      async function storageRetrieve() {
+        showLoading('storageOutput');
+        document.getElementById('storageOutput').innerHTML = '';
+
+        try {
+          if (!window.__chromeExtensionBridge) {
+            throw new Error('Extension bridge not available');
+          }
+
+          const result = await window.__chromeExtensionBridge.call(
+            'storage',
+            'local',
+            'get',
+            null
+          );
+
+          addOutput('storageOutput', JSON.stringify(result, null, 2));
+          addOutput('storageOutput', '');
+          addOutput('storageOutput', '✅ Data retrieved from storage');
+        } catch (error) {
+          addOutput('storageOutput', `⚠️ Storage retrieval: ${error.message}`, true);
+        }
+      }
+
+      // Initial status check
+      window.addEventListener('load', () => {
+        checkBridgeStatus();
+
+        // Check again after a short delay to ensure bridge is loaded
+        setTimeout(() => {
+          if (typeof window.__chromeExtensionBridge === 'undefined') {
+            updateStatus(false, 'Bridge loading...');
+            setTimeout(checkBridgeStatus, 1000);
+          }
+        }, 500);
+      });
+
+      console.log('Sample page loaded. Waiting for extension bridge...');
+    </script>
+  </body>
+</html>

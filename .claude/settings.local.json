@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Read(//Users/thiendiep/flow/flowcio-extension/flowcio/extension/src/**)",
+      "Read(//Users/thiendiep/flow/flowcio-extension/flowcio/extension/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

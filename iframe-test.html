@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Third-party Iframe Bridge Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        iframe { width: 800px; height: 600px; border: 2px solid #ccc; margin: 20px 0; }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .log { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; font-family: monospace; max-height: 300px; overflow-y: auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>Third-party Iframe Bridge Test</h1>
+
+    <div class="status" id="mainFrameStatus">
+        <strong>Main Frame Bridge Status:</strong> <span id="mainBridgeStatus">Checking...</span>
+    </div>
+
+    <div class="controls">
+        <button onclick="checkMainFrameBridge()">Check Main Frame Bridge</button>
+        <button onclick="checkIframeBridge()">Check Iframe Bridge</button>
+        <button onclick="testMainFrameAPI()">Test Main Frame API</button>
+        <button onclick="testIframeAPI()">Test Iframe API</button>
+        <button onclick="manuallyInjectBridge()" style="background: #ff6b35;">🚀 Manually Inject Bridge</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <h2>Test Iframe (Simulates third-party context):</h2>
+    <!-- This iframe will simulate a third-party iframe with different origin -->
+    <iframe id="testIframe" src="data:text/html;charset=utf-8,
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Simulated Third-party Iframe</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; background: #f0f8ff; }
+            .iframe-content { border: 2px dashed #007bff; padding: 20px; margin: 10px 0; }
+            button { padding: 8px 16px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+            button:hover { background: #218838; }
+            .bridge-status { padding: 10px; margin: 10px 0; border-radius: 4px; font-weight: bold; }
+            .bridge-available { background: #d4edda; color: #155724; }
+            .bridge-unavailable { background: #f8d7da; color: #721c24; }
+            .log { background: white; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; }
+        </style>
+    </head>
+    <body>
+        <div class='iframe-content'>
+            <h3>🖼️ Iframe Context (Simulated Third-party)</h3>
+            <p><strong>Origin:</strong> <span id='iframeOrigin'></span></p>
+            <p><strong>Is Main Frame:</strong> <span id='isMainFrame'></span></p>
+
+            <div id='bridgeStatus' class='bridge-status bridge-unavailable'>
+                Bridge Status: <span id='bridgeStatusText'>Unknown</span>
+            </div>
+
+            <button onclick='checkBridge()'>Check Bridge</button>
+            <button onclick='testBridgeAPI()'>Test Bridge API</button>
+            <button onclick='simulateUserInteraction()'>Simulate User Interaction</button>
+
+            <div id='iframeLog' class='log'></div>
+        </div>
+
+        <script>
+            function log(message) {
+                const logEl = document.getElementById('iframeLog');
+                const timestamp = new Date().toLocaleTimeString();
+                logEl.innerHTML += '[' + timestamp + '] ' + message + '<br>';
+                logEl.scrollTop = logEl.scrollHeight;
+                console.log('[Iframe Test]', message);
+            }
+
+            function updateBridgeStatus() {
+                const bridge = window.__chromeExtensionBridge;
+                const statusEl = document.getElementById('bridgeStatus');
+                const textEl = document.getElementById('bridgeStatusText');
+
+                if (bridge && bridge.call && bridge.execute) {
+                    statusEl.className = 'bridge-status bridge-available';
+                    textEl.textContent = 'Available ✅';
+                    return true;
+                } else {
+                    statusEl.className = 'bridge-status bridge-unavailable';
+                    textEl.textContent = 'Undefined/Invalid ❌';
+                    return false;
+                }
+            }
+
+            function checkBridge() {
+                const bridge = window.__chromeExtensionBridge;
+                log('Bridge check: ' + (bridge ? (typeof bridge + ' with methods: ' + Object.keys(bridge).join(', ')) : 'undefined'));
+                updateBridgeStatus();
+            }
+
+            async function testBridgeAPI() {
+                const bridge = window.__chromeExtensionBridge;
+                if (!bridge) {
+                    log('❌ Bridge not available for API test');
+                    return;
+                }
+
+                try {
+                    log('🔄 Testing bridge.call() method...');
+                    const result = await bridge.call('tabs', 'query', { active: true, currentWindow: true });
+                    log('✅ Bridge API test successful: ' + JSON.stringify(result).substring(0, 100) + '...');
+                } catch (error) {
+                    log('❌ Bridge API test failed: ' + error.message);
+                }
+            }
+
+            function simulateUserInteraction() {
+                log('👤 User interaction triggered');
+                checkBridge();
+                setTimeout(() => {
+                    log('⏰ Delayed check after user interaction...');
+                    checkBridge();
+                }, 1000);
+            }
+
+            // Initialize iframe context info
+            document.getElementById('iframeOrigin').textContent = window.location.origin;
+            document.getElementById('isMainFrame').textContent = window === window.top ? 'Yes' : 'No';
+
+            // Initial bridge check
+            log('Iframe loaded, checking initial bridge status...');
+            checkBridge();
+
+            // Monitor bridge availability
+            let bridgeMonitor = setInterval(() => {
+                const wasAvailable = document.getElementById('bridgeStatusText').textContent.includes('✅');
+                const isAvailable = updateBridgeStatus();
+
+                if (!wasAvailable && isAvailable) {
+                    log('🎉 Bridge became available!');
+                } else if (wasAvailable && !isAvailable) {
+                    log('⚠️ Bridge became unavailable!');
+                }
+            }, 1000);
+
+            // Stop monitoring after 30 seconds
+            setTimeout(() => {
+                clearInterval(bridgeMonitor);
+                log('🛑 Bridge monitoring stopped');
+            }, 30000);
+        </script>
+    </body>
+    </html>
+    "></iframe>
+
+    <div class="log" id="logOutput">
+        <strong>Test Logs:</strong><br>
+    </div>
+
+    <script>
+        function log(message) {
+            const logEl = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += '[' + timestamp + '] ' + message + '<br>';
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log('[Main Frame Test]', message);
+        }
+
+        function checkMainFrameBridge() {
+            const bridge = window.__chromeExtensionBridge;
+            const statusEl = document.getElementById('mainBridgeStatus');
+
+            if (bridge && bridge.call && bridge.execute) {
+                statusEl.textContent = 'Available ✅';
+                statusEl.parentElement.className = 'status success';
+                log('✅ Main frame bridge is available');
+            } else {
+                statusEl.textContent = 'Unavailable ❌';
+                statusEl.parentElement.className = 'status error';
+                log('❌ Main frame bridge is not available: ' + (bridge ? typeof bridge : 'undefined'));
+            }
+        }
+
+        function checkIframeBridge() {
+            const iframe = document.getElementById('testIframe');
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const bridge = iframeWindow.__chromeExtensionBridge;
+
+                if (bridge && bridge.call && bridge.execute) {
+                    log('✅ Iframe bridge is available');
+                } else {
+                    log('❌ Iframe bridge is not available: ' + (bridge ? typeof bridge : 'undefined'));
+                }
+            } catch (error) {
+                log('❌ Cannot access iframe bridge (cross-origin?): ' + error.message);
+            }
+        }
+
+        async function testMainFrameAPI() {
+            const bridge = window.__chromeExtensionBridge;
+            if (!bridge) {
+                log('❌ Main frame bridge not available for testing');
+                return;
+            }
+
+            try {
+                log('🔄 Testing main frame bridge API...');
+                const result = await bridge.call('tabs', 'query', { active: true, currentWindow: true });
+                log('✅ Main frame API test successful');
+            } catch (error) {
+                log('❌ Main frame API test failed: ' + error.message);
+            }
+        }
+
+        function testIframeAPI() {
+            const iframe = document.getElementById('testIframe');
+            try {
+                iframe.contentWindow.postMessage({ action: 'testAPI' }, '*');
+                log('📤 Sent test message to iframe');
+            } catch (error) {
+                log('❌ Failed to send test message to iframe: ' + error.message);
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logOutput').innerHTML = '<strong>Test Logs:</strong><br>';
+        }
+
+        // Manual injection functionality
+        async function manuallyInjectBridge() {
+            log('🚀 Starting manual bridge injection...');
+
+            try {
+                // First, fetch the injected script content from the extension
+                const scriptContent = await fetchInjectedScript();
+
+                if (!scriptContent) {
+                    log('❌ Failed to fetch injected script content');
+                    return;
+                }
+
+                log('📄 Fetched injected script content (' + scriptContent.length + ' characters)');
+
+                // Inject into the test iframe
+                await injectIntoIframe('testIframe', scriptContent);
+
+                // Also try to inject into any Google AI Studio iframes found
+                await injectIntoGoogleAIStudioIframes(scriptContent);
+
+                log('✅ Manual injection completed');
+
+            } catch (error) {
+                log('❌ Manual injection failed: ' + error.message);
+            }
+        }
+
+        async function fetchInjectedScript() {
+            try {
+                // Try to get the script from the extension's web accessible resources
+                const scriptUrl = chrome.runtime.getURL('injected-script.js');
+                const response = await fetch(scriptUrl);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch script: ' + response.status);
+                }
+
+                return await response.text();
+            } catch (error) {
+                log('⚠️ Could not fetch from extension, using fallback approach: ' + error.message);
+
+                // Fallback: return the injected script code directly
+                return getInjectedScriptFallback();
+            }
+        }
+
+        function getInjectedScriptFallback() {
+            // This is a fallback version of the injected script
+            return `
+                const generateRequestId = () => {
+                    return 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                };
+
+                const serializeGoogleGenAI = (googleGenAI) => {
+                    try {
+                        const apiKey = googleGenAI.apiKey || extractApiKeyFromInstance(googleGenAI);
+
+                        if (!apiKey) {
+                            throw new Error('Unable to extract API key from GoogleGenAI instance');
+                        }
+
+                        return JSON.stringify({
+                            apiKey,
+                            timestamp: Date.now()
+                        });
+                    } catch (error) {
+                        throw new Error('Failed to serialize GoogleGenAI instance: ' + (error.message || String(error)));
+                    }
+                };
+
+                const extractApiKeyFromInstance = (instance) => {
+                    if (instance.apiKey) return instance.apiKey;
+                    if (instance._apiKey) return instance._apiKey;
+                    if (instance.constructor && instance.constructor.apiKey) return instance.constructor.apiKey;
+
+                    let proto = Object.getPrototypeOf(instance);
+                    while (proto && proto !== Object.prototype) {
+                        if (proto.apiKey) return proto.apiKey;
+                        if (proto._apiKey) return proto._apiKey;
+                        proto = Object.getPrototypeOf(proto);
+                    }
+
+                    return null;
+                };
+
+                const pendingRequests = new Map();
+
+                const extensionBridge = {
+                    call: (namespace, method, ...args) => {
+                        return new Promise((resolve, reject) => {
+                            const requestId = generateRequestId();
+
+                            const timeout = setTimeout(() => {
+                                pendingRequests.delete(requestId);
+                                reject(new Error('Extension API call timeout'));
+                            }, 5000);
+
+                            pendingRequests.set(requestId, { resolve, reject });
+
+                            window.postMessage({
+                                type: 'extension_api_call',
+                                namespace,
+                                method,
+                                args,
+                                requestId,
+                            }, '*');
+                        });
+                    },
+
+                    execute: (googleGenAI, command) => {
+                        return new Promise((resolve, reject) => {
+                            const requestId = generateRequestId();
+
+                            const timeout = setTimeout(() => {
+                                pendingRequests.delete(requestId);
+                                reject(new Error('GoogleGenAI execution timeout'));
+                            }, 30000);
+
+                            pendingRequests.set(requestId, { resolve, reject });
+
+                            const serializedInstance = serializeGoogleGenAI(googleGenAI);
+
+                            window.postMessage({
+                                type: 'googlegenai_execute',
+                                serializedInstance,
+                                command,
+                                requestId,
+                            }, '*');
+                        });
+                    },
+
+                    onResponse: (callback) => {
+                        window.addEventListener('message', (event) => {
+                            if (event.source !== window) return;
+                            if (event.data.type === 'extension_api_response' || event.data.type === 'googlegenai_response') {
+                                callback(event.data);
+                            }
+                        });
+                    },
+                };
+
+                window.addEventListener('message', (event) => {
+                    if (event.source !== window) return;
+
+                    if (event.data.type === 'extension_api_response' || event.data.type === 'googlegenai_response') {
+                        const { requestId, result, error } = event.data;
+                        const pending = pendingRequests.get(requestId);
+
+                        if (pending) {
+                            if (error) {
+                                pending.reject(error);
+                            } else {
+                                pending.resolve(result);
+                            }
+                            pendingRequests.delete(requestId);
+                        }
+                    }
+                }, false);
+
+                window.__chromeExtensionBridge = extensionBridge;
+                console.log('[Manual Injection] Chrome Extension Bridge is now available at window.__chromeExtensionBridge');
+            `;
+        }
+
+        async function injectIntoIframe(iframeId, scriptContent) {
+            const iframe = document.getElementById(iframeId);
+            if (!iframe) {
+                log('❌ Iframe with id "' + iframeId + '" not found');
+                return;
+            }
+
+            try {
+                const iframeWindow = iframe.contentWindow;
+                const iframeDocument = iframe.contentDocument || iframeWindow.document;
+
+                if (!iframeDocument) {
+                    throw new Error('Cannot access iframe document (cross-origin restriction)');
+                }
+
+                // Create a script element and inject the bridge code
+                const script = iframeDocument.createElement('script');
+                script.textContent = scriptContent;
+
+                // If the iframe doesn't have a head, create one
+                if (!iframeDocument.head) {
+                    const head = iframeDocument.createElement('head');
+                    iframeDocument.documentElement.appendChild(head);
+                }
+
+                iframeDocument.head.appendChild(script);
+
+                log('✅ Successfully injected bridge into iframe: ' + iframeId);
+
+                // Wait a moment and then check if the bridge is available
+                setTimeout(() => {
+                    try {
+                        if (iframeWindow.__chromeExtensionBridge) {
+                            log('🎉 Bridge confirmed available in iframe: ' + iframeId);
+                        } else {
+                            log('⚠️ Bridge injection completed but __chromeExtensionBridge not found in iframe: ' + iframeId);
+                        }
+                    } catch (e) {
+                        log('⚠️ Cannot verify bridge in iframe due to access restrictions: ' + e.message);
+                    }
+                }, 500);
+
+            } catch (error) {
+                log('❌ Failed to inject into iframe "' + iframeId + '": ' + error.message);
+            }
+        }
+
+        async function injectIntoGoogleAIStudioIframes(scriptContent) {
+            // Look for Google AI Studio iframes on the current page
+            const allIframes = document.querySelectorAll('iframe');
+            let googleAIStudioIframes = [];
+
+            allIframes.forEach((iframe, index) => {
+                const src = iframe.src || '';
+                if (src.includes('scf.usercontent.goog') ||
+                    src.includes('aistudio.google.com') ||
+                    iframe.title === 'Preview') {
+                    googleAIStudioIframes.push({iframe, index});
+                }
+            });
+
+            if (googleAIStudioIframes.length === 0) {
+                log('ℹ️ No Google AI Studio iframes detected on this page');
+                return;
+            }
+
+            log('🔍 Found ' + googleAIStudioIframes.length + ' potential Google AI Studio iframe(s)');
+
+            for (const {iframe, index} of googleAIStudioIframes) {
+                try {
+                    log('🎯 Attempting to inject into Google AI Studio iframe #' + index + ' (src: ' + iframe.src.substring(0, 50) + '...)');
+
+                    const iframeWindow = iframe.contentWindow;
+                    const iframeDocument = iframe.contentDocument || iframeWindow.document;
+
+                    if (!iframeDocument) {
+                        log('⚠️ Cannot access Google AI Studio iframe #' + index + ' (cross-origin restriction)');
+                        continue;
+                    }
+
+                    // Create a script element and inject the bridge code
+                    const script = iframeDocument.createElement('script');
+                    script.textContent = scriptContent;
+
+                    if (!iframeDocument.head) {
+                        const head = iframeDocument.createElement('head');
+                        iframeDocument.documentElement.appendChild(head);
+                    }
+
+                    iframeDocument.head.appendChild(script);
+
+                    log('✅ Successfully injected bridge into Google AI Studio iframe #' + index);
+
+                    // Verify injection
+                    setTimeout(() => {
+                        try {
+                            if (iframeWindow.__chromeExtensionBridge) {
+                                log('🎉 Bridge confirmed in Google AI Studio iframe #' + index);
+                            }
+                        } catch (e) {
+                            log('⚠️ Cannot verify bridge in Google AI Studio iframe #' + index);
+                        }
+                    }, 500);
+
+                } catch (error) {
+                    log('❌ Failed to inject into Google AI Studio iframe #' + index + ': ' + error.message);
+                }
+            }
+        }
+
+        // Initial check on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, starting bridge tests...');
+            setTimeout(checkMainFrameBridge, 1000);
+            setTimeout(checkIframeBridge, 2000);
+        });
+
+        // Monitor for extension installation/updates
+        let mainBridgeMonitor = setInterval(checkMainFrameBridge, 3000);
+
+        setTimeout(() => {
+            clearInterval(mainBridgeMonitor);
+            log('🛑 Main bridge monitoring stopped');
+        }, 30000);
+    </script>
+</body>
+</html>

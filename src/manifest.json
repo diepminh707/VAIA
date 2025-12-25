@@ -1,19 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Chrome Extension with Side Panel",
-  "version": "1.0.0",
-  "description": "A Chrome extension with side panel using React and TypeScript",
+  "name": "VAIA - Flow API Extension",
+  "version": "1.0.1",
+  "description": "Chrome extension to control Google Flow's image and video generation API",
   "permissions": [
     "activeTab",
     "scripting",
     "tabs",
-    "sidePanel"
+    "sidePanel",
+    "storage"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://labs.google.com/*",
+    "https://labs.google/*",
+    "https://aisandbox-pa.googleapis.com/*"
   ],
   "action": {
-    "default_title": "Chrome Extension with Side Panel"
+    "default_title": "VAIA - Flow API Control"
   },
   "side_panel": {
     "default_path": "side-panel.html"
@@ -23,15 +26,23 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://labs.google.com/fx/tools/flow/*",
+        "https://labs.google/fx/tools/flow/*",
+        "https://labs.google.com/fx/*",
+        "https://labs.google/fx/*"
+      ],
       "js": ["content-script.js"],
-      "run_at": "document_start"
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": ["injected-script.js"],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "https://labs.google.com/*",
+        "https://labs.google/*"
+      ]
     }
   ]
 }

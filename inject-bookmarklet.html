@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome Extension Bridge - Manual Injection Bookmarklet</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .bookmarklet-section {
+            background: #e8f4f8;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .bookmarklet-link {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: background 0.3s;
+        }
+        .bookmarklet-link:hover {
+            background: #2980b9;
+        }
+        .code-section {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Chrome Extension Bridge Manual Injector</h1>
+
+        <div class="instructions">
+            <h3>📖 How to Use</h3>
+            <p><strong>Option 1: Bookmarklet (Recommended)</strong></p>
+            <ol>
+                <li>Drag the bookmarklet below to your bookmarks bar</li>
+                <li>Navigate to any page with Google AI Studio iframes</li>
+                <li>Click the bookmarklet to inject the bridge</li>
+                <li>Check console for injection results</li>
+            </ol>
+        </div>
+
+        <div class="bookmarklet-section">
+            <h3>🔖 Drag This Bookmarklet to Your Bookmarks Bar</h3>
+            <a href="javascript:(function(){var script=document.createElement('script');script.textContent=`const generateRequestId = () => { return 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }; const serializeGoogleGenAI = (googleGenAI) => { try { const apiKey = googleGenAI.apiKey || extractApiKeyFromInstance(googleGenAI); if (!apiKey) { throw new Error('Unable to extract API key from GoogleGenAI instance'); } return JSON.stringify({ apiKey, timestamp: Date.now() }); } catch (error) { throw new Error('Failed to serialize GoogleGenAI instance: ' + (error.message || String(error))); } }; const extractApiKeyFromInstance = (instance) => { if (instance.apiKey) return instance.apiKey; if (instance._apiKey) return instance._apiKey; if (instance.constructor && instance.constructor.apiKey) return instance.constructor.apiKey; let proto = Object.getPrototypeOf(instance); while (proto && proto !== Object.prototype) { if (proto.apiKey) return proto.apiKey; if (proto._apiKey) return proto._apiKey; proto = Object.getPrototypeOf(proto); } return null; }; if (!window.__chromeExtensionBridge) { const pendingRequests = new Map(); const extensionBridge = { call: (namespace, method, ...args) => { return new Promise((resolve, reject) => { const requestId = generateRequestId(); const timeout = setTimeout(() => { pendingRequests.delete(requestId); reject(new Error('Extension API call timeout')); }, 5000); pendingRequests.set(requestId, { resolve, reject }); window.postMessage({ type: 'extension_api_call', namespace, method, args, requestId, }, '*'); }); }, execute: (googleGenAI, command) => { return new Promise((resolve, reject) => { const requestId = generateRequestId(); const timeout = setTimeout(() => { pendingRequests.delete(requestId); reject(new Error('GoogleGenAI execution timeout')); }, 30000); pendingRequests.set(requestId, { resolve, reject }); const serializedInstance = serializeGoogleGenAI(googleGenAI); window.postMessage({ type: 'googlegenai_execute', serializedInstance, command, requestId, }, '*'); }); }, onResponse: (callback) => { window.addEventListener('message', (event) => { if (event.source !== window) return; if (event.data.type === 'extension_api_response' || event.data.type === 'googlegenai_response') { callback(event.data); } }); }, }; window.addEventListener('message', (event) => { if (event.source !== window) return; if (event.data.type === 'extension_api_response' || event.data.type === 'googlegenai_response') { const { requestId, result, error } = event.data; const pending = pendingRequests.get(requestId); if (pending) { if (error) { pending.reject(error); } else { pending.resolve(result); } pendingRequests.delete(requestId); } } }, false); window.__chromeExtensionBridge = extensionBridge; console.log('[Manual Injection] Chrome Extension Bridge is now available at window.__chromeExtensionBridge'); } else { console.log('[Manual Injection] Bridge already exists'); } var iframes = document.querySelectorAll('iframe'); var injectedCount = 0; iframes.forEach((iframe, index) => { try { if (iframe.src.includes('scf.usercontent.goog') || iframe.src.includes('aistudio.google.com') || iframe.title === 'Preview' || iframe.src.includes('google') && iframe.src.includes('ai')) { var iframeDoc = iframe.contentDocument || iframe.contentWindow.document; if (iframeDoc && !iframe.contentWindow.__chromeExtensionBridge) { var iframeScript = iframeDoc.createElement('script'); iframeScript.textContent = script.textContent; if (!iframeDoc.head) { var head = iframeDoc.createElement('head'); iframeDoc.documentElement.appendChild(head); } iframeDoc.head.appendChild(iframeScript); injectedCount++; console.log('✅ Injected bridge into iframe #' + index + ' (src: ' + iframe.src.substring(0, 50) + '...)'); } } } catch (e) { console.log('❌ Could not inject into iframe #' + index + ': ' + e.message); } }); console.log('🚀 Manual injection completed. Processed ' + iframes.length + ' iframes, successfully injected into ' + injectedCount); alert('Bridge injection completed!\\nProcessed: ' + iframes.length + ' iframes\\nSuccessfully injected: ' + injectedCount);`;document.head.appendChild(script);})();" class="bookmarklet-link">🚀 Inject Extension Bridge</a>
+        </div>
+
+        <div class="instructions">
+            <p><strong>Option 2: Manual Script Execution</strong></p>
+            <ol>
+                <li>Open browser developer tools (F12)</li>
+                <li>Navigate to the Console tab</li>
+                <li>Copy and paste the script below</li>
+                <li>Press Enter to execute</li>
+            </ol>
+        </div>
+
+        <div class="code-section">
+<pre>// Manual Bridge Injection Script
+// Paste this into the browser console on any page with Google AI Studio iframes
+
+const injectExtensionBridge = () => {
+    const bridgeScript = `
+        const generateRequestId = () => {
+            return 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        };
+
+        const serializeGoogleGenAI = (googleGenAI) => {
+            try {
+                const apiKey = googleGenAI.apiKey || extractApiKeyFromInstance(googleGenAI);
+                if (!apiKey) {
+                    throw new Error('Unable to extract API key from GoogleGenAI instance');
+                }
+                return JSON.stringify({
+                    apiKey,
+                    timestamp: Date.now()
+                });
+            } catch (error) {
+                throw new Error('Failed to serialize GoogleGenAI instance: ' + (error.message || String(error)));
+            }
+        };
+
+        const extractApiKeyFromInstance = (instance) => {
+            if (instance.apiKey) return instance.apiKey;
+            if (instance._apiKey) return instance._apiKey;
+            if (instance.constructor && instance.constructor.apiKey) return instance.constructor.apiKey;
+
+            let proto = Object.getPrototypeOf(instance);
+            while (proto && proto !== Object.prototype) {
+                if (proto.apiKey) return proto.apiKey;
+                if (proto._apiKey) return proto._apiKey;
+                proto = Object.getPrototypeOf(proto);
+            }
+            return null;
+        };
+
+        if (!window.__chromeExtensionBridge) {
+            const pendingRequests = new Map();
+
+            const extensionBridge = {
+                call: (namespace, method, ...args) => {
+                    return new Promise((resolve, reject) => {
+                        const requestId = generateRequestId();
+                        const timeout = setTimeout(() => {
+                            pendingRequests.delete(requestId);
+                            reject(new Error('Extension API call timeout'));
+                        }, 5000);
+
+                        pendingRequests.set(requestId, { resolve, reject });
+
+                        window.postMessage({
+                            type: 'extension_api_call',
+                            namespace,
+                            method,
+                            args,
+                            requestId,
+                        }, '*');
+                    });
+                },
+
+                execute: (googleGenAI, command) => {
+                    return new Promise((resolve, reject) => {
+                        const requestId = generateRequestId();
+                        const timeout = setTimeout(() => {
+                            pendingRequests.delete(requestId);
+                            reject(new Error('GoogleGenAI execution timeout'));
+                        }, 30000);
+
+                        pendingRequests.set(requestId, { resolve, reject });
+                        const serializedInstance = serializeGoogleGenAI(googleGenAI);
+
+                        window.postMessage({
+                            type: 'googlegenai_execute',
+                            serializedInstance,
+                            command,
+                            requestId,
+                        }, '*');
+                    });
+                },
+
+                onResponse: (callback) => {
+                    window.addEventListener('message', (event) => {
+                        if (event.source !== window) return;
+                        if (event.data.type === 'extension_api_response' || event.data.type === 'googlegenai_response') {
+                            callback(event.data);
+                        }
+                    });
+                },
+            };
+
+            window.addEventListener('message', (event) => {
+                if (event.source !== window) return;
+                if (event.data.type === 'extension_api_response' || event.data.type === 'googlegenai_response') {
+                    const { requestId, result, error } = event.data;
+                    const pending = pendingRequests.get(requestId);
+                    if (pending) {
+                        if (error) {
+                            pending.reject(error);
+                        } else {
+                            pending.resolve(result);
+                        }
+                        pendingRequests.delete(requestId);
+                    }
+                }
+            }, false);
+
+            window.__chromeExtensionBridge = extensionBridge;
+            console.log('[Manual Injection] Chrome Extension Bridge is now available');
+        }
+    `;
+
+    // Inject into main window
+    const mainScript = document.createElement('script');
+    mainScript.textContent = bridgeScript;
+    document.head.appendChild(mainScript);
+
+    // Find and inject into Google AI Studio iframes
+    const iframes = document.querySelectorAll('iframe');
+    let injectedCount = 0;
+
+    iframes.forEach((iframe, index) => {
+        try {
+            const src = iframe.src || '';
+            if (src.includes('scf.usercontent.goog') ||
+                src.includes('aistudio.google.com') ||
+                iframe.title === 'Preview' ||
+                (src.includes('google') && src.includes('ai'))) {
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                if (iframeDoc && !iframe.contentWindow.__chromeExtensionBridge) {
+                    const iframeScript = iframeDoc.createElement('script');
+                    iframeScript.textContent = bridgeScript;
+
+                    if (!iframeDoc.head) {
+                        const head = iframeDoc.createElement('head');
+                        iframeDoc.documentElement.appendChild(head);
+                    }
+
+                    iframeDoc.head.appendChild(iframeScript);
+                    injectedCount++;
+                    console.log(`✅ Injected bridge into iframe #${index} (src: ${src.substring(0, 50)}...)`);
+                }
+            }
+        } catch (e) {
+            console.log(`❌ Could not inject into iframe #${index}: ${e.message}`);
+        }
+    });
+
+    console.log(`🚀 Manual injection completed. Processed ${iframes.length} iframes, successfully injected into ${injectedCount}`);
+    return { totalIframes: iframes.length, injectedCount };
+};
+
+// Execute the injection
+const result = injectExtensionBridge();
+console.log('Injection result:', result);
+</pre>
+        </div>
+
+        <div class="success">
+            <h3>✅ What This Does</h3>
+            <ul>
+                <li><strong>Main Page:</strong> Injects <code>window.__chromeExtensionBridge</code> API</li>
+                <li><strong>Google AI Studio iframes:</strong> Automatically detects and injects bridge into Google Cloud Functions iframes</li>
+                <li><strong>Cross-origin safe:</strong> Handles access restrictions gracefully</li>
+                <li><strong>Console logging:</strong> Reports injection success/failure for each iframe</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Important Notes</h3>
+            <ul>
+                <li>This manual injection only works if the iframe allows JavaScript execution</li>
+                <li>Cross-origin iframes may block access - this is a browser security feature</li>
+                <li>Your Chrome extension must be installed and loaded for the bridge to function</li>
+                <li>The bridge will only work if your extension's content script is also running on the page</li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h3>🧪 Testing</h3>
+            <p>After injection, test the bridge in any iframe by opening its console and running:</p>
+            <div class="code-section">
+<pre>// Test if bridge is available
+console.log(window.__chromeExtensionBridge);
+
+// Test Chrome API call
+window.__chromeExtensionBridge.call('tabs', 'query', { active: true })
+    .then(result => console.log('Success:', result))
+    .catch(error => console.error('Error:', error));
+</pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

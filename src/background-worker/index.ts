@@ -1,5 +1,4 @@
-import { APICallMessage, ResponseMessage, TabDataMessage, GoogleGenAIBridgeMessage, GoogleGenAIResponseMessage, GoogleGenAICommand } from '../shared/types';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { APICallMessage, ResponseMessage, TabDataMessage, FlowAPIMessage, FlowAPIResponse } from '../shared/types';
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -11,142 +10,6 @@ const pendingRequests = new Map<string, PendingRequest>();
 
 const generateRequestId = (): string => {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-// GoogleGenAI Command Handler - executes with serialized instance from web app
-const handleGoogleGenAICommand = async (command: GoogleGenAICommand, serializedInstance: string): Promise<unknown> => {
-  try {
-    // Reconstruct GoogleGenAI instance from serialized data
-    const genAI = reconstructGoogleGenAI(serializedInstance);
-    
-    switch (command.type) {
-      case 'generateImage':
-        return await generateImage(genAI, command.payload);
-      case 'generateContent':
-        return await generateContent(genAI, command.payload);
-      case 'generateText':
-        return await generateText(genAI, command.payload);
-      default:
-        throw new Error(`Unknown command type: ${(command as any).type}`);
-    }
-  } catch (error) {
-    throw error instanceof Error ? error : new Error(String(error));
-  }
-};
-
-// Reconstruct GoogleGenAI instance from serialized data
-const reconstructGoogleGenAI = (serializedInstance: string): GoogleGenerativeAI => {
-  try {
-    // Parse the serialized instance data
-    const instanceData = JSON.parse(serializedInstance);
-    
-    // Reconstruct the GoogleGenerativeAI instance
-    // Note: We only need the API key from the web app
-    return new GoogleGenerativeAI(instanceData.apiKey);
-  } catch (error) {
-    throw new Error('Failed to reconstruct GoogleGenAI instance from web app data');
-  }
-};
-
-const generateImage = async (genAI: GoogleGenerativeAI, payload: GoogleGenAICommand['payload']): Promise<unknown> => {
-  const { images = [], prompt, aspectRatio = '16:9', model = 'gemini-2.0-flash-exp-image-generation' } = payload;
-  
-  const modelInstance = genAI.getGenerativeModel({ model });
-  
-  const parts: any[] = [{ text: prompt }];
-  
-  if (images.length > 0) {
-    for (const imageData of images) {
-      parts.push({
-        inlineData: {
-          data: imageData,
-          mimeType: 'image/png'
-        }
-      });
-    }
-  }
-  
-  const response = await modelInstance.generateContent({
-    contents: [{ role: 'user', parts }],
-    generationConfig: {
-      candidateCount: 1,
-    },
-  });
-  
-  const result = response.response;
-  const candidates = result.candidates || [];
-  
-  const generatedImages: string[] = [];
-  const generatedText: string[] = [];
-  
-  for (const candidate of candidates) {
-    for (const part of candidate.content?.parts || []) {
-      if (part.inlineData) {
-        generatedImages.push(part.inlineData.data);
-      } else if (part.text) {
-        generatedText.push(part.text);
-      }
-    }
-  }
-  
-  return {
-    images: generatedImages,
-    text: generatedText.join('\n'),
-    success: true
-  };
-};
-
-const generateContent = async (genAI: GoogleGenerativeAI, payload: GoogleGenAICommand['payload']): Promise<unknown> => {
-  const { images = [], prompt, model = 'gemini-1.5-flash', temperature = 0.7, maxTokens = 1024 } = payload;
-  
-  const modelInstance = genAI.getGenerativeModel({ model });
-  
-  const parts: any[] = [{ text: prompt }];
-  
-  if (images.length > 0) {
-    for (const imageData of images) {
-      parts.push({
-        inlineData: {
-          data: imageData,
-          mimeType: 'image/png'
-        }
-      });
-    }
-  }
-  
-  const response = await modelInstance.generateContent({
-    contents: [{ role: 'user', parts }],
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-      candidateCount: 1,
-    },
-  });
-  
-  return {
-    text: response.response.text(),
-    success: true
-  };
-};
-
-const generateText = async (genAI: GoogleGenerativeAI, payload: GoogleGenAICommand['payload']): Promise<unknown> => {
-  const { prompt, model = 'gemini-1.5-flash', temperature = 0.7, maxTokens = 1024 } = payload;
-  
-  const modelInstance = genAI.getGenerativeModel({ model });
-  
-  const response = await modelInstance.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-      candidateCount: 1,
-    },
-  });
-  
-  return {
-    text: response.response.text(),
-    success: true
-  };
 };
 
 const executeChromAPI = async (
@@ -182,38 +45,152 @@ const executeChromAPI = async (
   }
 };
 
+console.log('[VAIA] Background service worker started');
+
+// Track Flow tab ID
+let flowTabId: number | null = null;
+
+// Monitor tab updates to detect Flow page
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    if (tab.url.includes('labs.google.com/fx') || tab.url.includes('labs.google/fx')) {
+      console.log('[VAIA] Flow page detected:', tab.url);
+      flowTabId = tabId;
+    }
+  }
+});
+
+// Clean up when tabs are closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === flowTabId) {
+    console.log('[VAIA] Flow tab closed');
+    flowTabId = null;
+  }
+});
+
+// Handle extension install/update - inject into already-open Flow tabs
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log('[VAIA] Extension event:', details.reason);
+
+  if (details.reason === 'install' || details.reason === 'update') {
+    try {
+      // Find all open Flow tabs
+      const tabs = await chrome.tabs.query({});
+      const flowTabs = tabs.filter(tab =>
+        tab.url?.includes('labs.google.com/fx') ||
+        tab.url?.includes('labs.google/fx')
+      );
+
+      console.log('[VAIA] Found', flowTabs.length, 'open Flow tab(s)');
+
+      // Inject content script into each Flow tab
+      for (const tab of flowTabs) {
+        if (!tab.id) continue;
+
+        try {
+          // Inject content script programmatically
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content-script.js']
+          });
+          console.log('[VAIA] ✅ Injected content script into tab', tab.id, tab.url);
+        } catch (error: any) {
+          console.error('[VAIA] ❌ Failed to inject into tab', tab.id, ':', error.message);
+        }
+      }
+
+      if (flowTabs.length === 0) {
+        console.log('[VAIA] ℹ️ No open Flow tabs found. Extension will inject when Flow page is opened.');
+      }
+    } catch (error) {
+      console.error('[VAIA] Error during install injection:', error);
+    }
+  }
+});
+
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, sender, sendResponse) => {
-    console.log('[Background Worker] Received message:', message);
+    console.log('[VAIA] Background Worker received message:', message);
 
-    if (message.type === 'googlegenai_execute') {
-      const genaiMessage = message as GoogleGenAIBridgeMessage;
-      const { serializedInstance, command } = genaiMessage.payload;
-      const requestId = genaiMessage.requestId || generateRequestId();
+    // Handle Flow API calls from side panel
+    if (message.type === 'flow_api_call') {
+      const flowMessage = message as FlowAPIMessage;
+      const requestId = flowMessage.requestId || generateRequestId();
 
-      handleGoogleGenAICommand(command, serializedInstance)
-        .then((result) => {
-          const response: GoogleGenAIResponseMessage = {
-            type: 'googlegenai_response',
+      // Find Flow tab - prioritize tracked flowTabId, then search all tabs
+      const findFlowTab = async () => {
+        // Strategy 1: Use tracked Flow tab ID
+        if (flowTabId !== null) {
+          try {
+            const tab = await chrome.tabs.get(flowTabId);
+            if (tab && (tab.url?.includes('labs.google.com/fx') || tab.url?.includes('labs.google/fx'))) {
+              console.log('[VAIA] Using tracked Flow tab:', tab.url);
+              return tab;
+            }
+          } catch (e) {
+            console.log('[VAIA] Tracked Flow tab no longer valid');
+            flowTabId = null;
+          }
+        }
+
+        // Strategy 2: Query all tabs to find Flow page
+        const tabs = await chrome.tabs.query({});
+        const flowTab = tabs.find(tab =>
+          tab.url?.includes('labs.google.com/fx') || tab.url?.includes('labs.google/fx')
+        );
+
+        if (flowTab) {
+          console.log('[VAIA] Found Flow tab via query:', flowTab.url);
+          flowTabId = flowTab.id || null;
+          return flowTab;
+        }
+
+        return null;
+      };
+
+      findFlowTab().then(flowTab => {
+        if (!flowTab || !flowTab.id) {
+          const errorResponse: FlowAPIResponse = {
+            type: 'flow_api_response',
             payload: {
               requestId,
-              result,
+              success: false,
+              error: 'Flow tab not found. Please open https://labs.google.com/fx/tools/flow/ first.',
             },
           };
-          sendResponse(response);
-        })
-        .catch((error) => {
-          const response: GoogleGenAIResponseMessage = {
-            type: 'googlegenai_response',
-            payload: {
-              requestId,
-              error: error instanceof Error ? error.message : String(error),
-            },
-          };
-          sendResponse(response);
+          sendResponse(errorResponse);
+          return;
+        }
+
+        // Forward to content script which will communicate with injected script
+        chrome.tabs.sendMessage(flowTab.id, flowMessage, (response: FlowAPIResponse) => {
+          if (chrome.runtime.lastError) {
+            const errorResponse: FlowAPIResponse = {
+              type: 'flow_api_response',
+              payload: {
+                requestId,
+                success: false,
+                error: `Failed to connect to Flow page: ${chrome.runtime.lastError.message}. Make sure you're on the Flow page.`,
+              },
+            };
+            sendResponse(errorResponse);
+          } else {
+            sendResponse(response);
+          }
         });
+      }).catch(error => {
+        const errorResponse: FlowAPIResponse = {
+          type: 'flow_api_response',
+          payload: {
+            requestId,
+            success: false,
+            error: `Error finding Flow tab: ${error.message}`,
+          },
+        };
+        sendResponse(errorResponse);
+      });
 
-      return true;
+      return true; // Keep channel open for async response
     }
 
     if (message.type === 'api_call') {
@@ -272,3 +249,5 @@ chrome.runtime.onMessage.addListener(
 );
 
 type ExtensionMessage = import('../shared/types').ExtensionMessage;
+
+console.log('[VAIA] Background service worker ready');

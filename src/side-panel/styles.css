@@ -2,6 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 266 86% 56%; /* #8c2bee */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 266 86% 56%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 20% 8%; /* #191022 */
+    --foreground: 0 0% 100%;
+    --card: 224 18% 10%; /* #1a1122 */
+    --card-foreground: 0 0% 100%;
+    --popover: 224 18% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 266 86% 56%; /* #8c2bee */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 259 24% 21%; /* #362348 */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 259 32% 16%; /* #261933 */
+    --muted-foreground: 268 26% 68%; /* #ad92c9 */
+    --accent: 259 24% 21%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 259 24% 21%; /* #362348 */
+    --input: 259 32% 30%; /* #4d3267 */
+    --ring: 266 86% 56%;
+    --radius: 0.5rem;
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -13,8 +61,27 @@ body,
 #root {
   width: 100%;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+  font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1122;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #362348;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4d3267;
 }

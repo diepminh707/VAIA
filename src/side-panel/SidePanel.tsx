@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import type { FlowAPIMessage, FlowAPIResponse } from '../shared/types';
+import { Header } from '@/ui/Header';
+import { TabLayout } from '@/ui/TabLayout';
+import { ImageGenerationForm } from '@/ui/ImageGenerationForm';
+import { VideoGenerationForm } from '@/ui/VideoGenerationForm';
+import { ActivityLog } from '@/ui/ActivityLog';
+import { TabsContent } from '@/components/tabs';
+import { Alert, AlertDescription } from '@/components/alert';
+import { X } from 'lucide-react';
 
 interface ConnectionStatus {
   connected: boolean;
@@ -51,19 +59,6 @@ const SidePanel: React.FC = () => {
     setActivities((prev) => [activity, ...prev].slice(0, 50)); // Keep last 50 activities
   };
 
-  const getSeverityColor = (severity: Activity['severity']) => {
-    switch (severity) {
-      case 'success':
-        return 'bg-green-50 text-green-800';
-      case 'warning':
-        return 'bg-yellow-50 text-yellow-800';
-      case 'error':
-        return 'bg-red-50 text-red-800';
-      default:
-        return 'bg-gray-50 text-gray-800';
-    }
-  };
-
   const callFlowAPI = async (command: string, data: any = null): Promise<any> => {
     return new Promise((resolve, reject) => {
       const message: FlowAPIMessage = {
@@ -92,7 +87,6 @@ const SidePanel: React.FC = () => {
       const oldTokenSource = status?.tokenSource;
       const result = await callFlowAPI('testConnection');
       setStatus(result);
-      // ✅ Don't clear operation errors - only clear on new operations
 
       // Log token refresh if source changed or new token acquired
       if (result.tokenSource && result.tokenSource !== oldTokenSource) {
@@ -108,7 +102,6 @@ const SidePanel: React.FC = () => {
       }
     } catch (err: any) {
       // Only set error if we don't already have an operation error
-      // This prevents connection errors from overwriting operation errors
       if (!error || !isLoading) {
         setError(err.message);
       }
@@ -128,7 +121,7 @@ const SidePanel: React.FC = () => {
       return;
     }
 
-    const prompts = imagePrompts.split('\n').filter(p => p.trim()).slice(0, 4); // Max 4 prompts
+    const prompts = imagePrompts.split('\n').filter(p => p.trim()).slice(0, 4);
 
     try {
       setIsLoading(true);
@@ -141,7 +134,6 @@ const SidePanel: React.FC = () => {
         referenceImageIds: [],
       });
 
-      // Extract image URIs from Flow API response
       if (result.media && result.media.length > 0) {
         const imageUrls = result.media.map((m: any) => m.uri);
         setGeneratedImages(imageUrls);
@@ -194,208 +186,71 @@ const SidePanel: React.FC = () => {
   // Check connection on mount and periodically
   useEffect(() => {
     checkConnection();
-    const interval = setInterval(checkConnection, 10000); // Every 10s
+    const interval = setInterval(checkConnection, 10000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="w-full min-h-screen p-4 bg-gray-50">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">VAIA - Flow API Control</h1>
+    <div className="flex flex-col h-screen dark bg-background-dark overflow-hidden">
+      {/* Header */}
+      <Header
+        status={status}
+        onReconnect={checkConnection}
+        isLoading={isLoading}
+      />
 
-      {/* Status Bar */}
-      <div className="bg-white p-3 rounded-lg border border-gray-200 mb-4">
-        <div className="flex items-center justify-between">
-          {status ? (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-700">Connected to Flow</span>
-              {status.projectId && (
-                <span className="text-xs text-gray-500 ml-2">
-                  Project: {status.projectId.substring(0, 8)}...
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">
-                {error || 'Not connected'}
-              </span>
-            </div>
-          )}
-          <button
-            onClick={checkConnection}
-            disabled={isLoading}
-            className="text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50"
-          >
-            Refresh
-          </button>
-        </div>
-
-        {/* Token Info */}
-        {status?.hasAuth && (
-          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-3 text-xs text-gray-500">
-            {status.tokenSource && (
-              <span className="flex items-center gap-1">
-                🔑 Source: <span className="font-mono text-gray-700">{status.tokenSource}</span>
-              </span>
-            )}
-            {status.user?.email && (
-              <span className="flex items-center gap-1">
-                👤 {status.user.email}
-              </span>
-            )}
-            {status.tokenExpires && (
-              <span className="flex items-center gap-1">
-                ⏰ Expires: {new Date(status.tokenExpires).toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Error Display */}
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-300 rounded-lg p-3 mb-4 flex items-start justify-between gap-2">
-          <p className="text-sm text-red-700 flex-1">{error}</p>
-          <button
-            onClick={() => setError(null)}
-            className="text-red-700 hover:text-red-900 font-bold"
-            title="Dismiss error"
-          >
-            ×
-          </button>
+        <div className="mx-4 mt-4">
+          <Alert variant="destructive" className="relative">
+            <AlertDescription className="pr-8">{error}</AlertDescription>
+            <button
+              onClick={() => setError(null)}
+              className="absolute top-3 right-3 text-destructive-foreground/70 hover:text-destructive-foreground"
+              title="Dismiss error"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Alert>
         </div>
       )}
 
-      {/* Image Generation */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Image Generation</h2>
+      {/* Tab Layout with Content */}
+      <TabLayout defaultTab="image">
+        <TabsContent value="image" className="flex-1 m-0 h-full">
+          <ImageGenerationForm
+            imagePrompts={imagePrompts}
+            setImagePrompts={setImagePrompts}
+            aspectRatio={aspectRatio}
+            setAspectRatio={setAspectRatio}
+            generatedImages={generatedImages}
+            isLoading={isLoading}
+            onGenerate={handleGenerateImages}
+            status={status}
+          />
+        </TabsContent>
 
-        <textarea
-          value={imagePrompts}
-          onChange={(e) => setImagePrompts(e.target.value)}
-          placeholder="Enter prompts (one per line, max 4)&#10;Example:&#10;A sunset over mountains&#10;A futuristic city"
-          className="w-full p-2 border border-gray-300 rounded text-sm mb-3 font-mono"
-          rows={4}
-        />
+        <TabsContent value="video" className="flex-1 m-0 h-full">
+          <VideoGenerationForm
+            videoPrompt={videoPrompt}
+            setVideoPrompt={setVideoPrompt}
+            videoType={videoType}
+            setVideoType={setVideoType}
+            videoModel={videoModel}
+            setVideoModel={setVideoModel}
+            isLoading={isLoading}
+            onGenerate={handleGenerateVideo}
+            status={status}
+          />
+        </TabsContent>
 
-        <select
-          value={aspectRatio}
-          onChange={(e) => setAspectRatio(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded text-sm mb-3"
-        >
-          <option value="IMAGE_ASPECT_RATIO_SQUARE">Square (1:1) - 1024x1024</option>
-          <option value="IMAGE_ASPECT_RATIO_LANDSCAPE">Landscape (16:9) - 1536x864</option>
-          <option value="IMAGE_ASPECT_RATIO_PORTRAIT">Portrait (9:16) - 864x1536</option>
-          <option value="IMAGE_ASPECT_RATIO_ULTRA_WIDE">Ultra Wide (21:9) - 1920x823</option>
-          <option value="IMAGE_ASPECT_RATIO_4_3">4:3 - 1024x768</option>
-          <option value="IMAGE_ASPECT_RATIO_3_2">3:2 - 1536x1024</option>
-        </select>
-
-        <button
-          onClick={handleGenerateImages}
-          disabled={isLoading || !status}
-          className="w-full py-2 bg-blue-600 text-white rounded font-medium text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Generating...' : !status ? 'Not Connected' : 'Generate Images'}
-        </button>
-
-        {generatedImages.length > 0 && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {generatedImages.map((imgUrl, idx) => (
-              <div key={idx} className="relative">
-                <img
-                  src={imgUrl}
-                  alt={`Generated ${idx + 1}`}
-                  className="w-full rounded border border-gray-200"
-                  onError={(e) => {
-                    addActivity(`❌ Failed to load image ${idx + 1}`, 'error');
-                    console.error('Image load error:', imgUrl);
-                  }}
-                />
-                <a
-                  href={imgUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute top-2 right-2 bg-white bg-opacity-80 px-2 py-1 rounded text-xs hover:bg-opacity-100"
-                >
-                  Open
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Video Generation */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Video Generation</h2>
-
-        <select
-          value={videoType}
-          onChange={(e) => setVideoType(e.target.value as any)}
-          className="w-full p-2 border border-gray-300 rounded text-sm mb-3"
-        >
-          <option value="text-to-video">Text to Video</option>
-          <option value="image-to-video">Image to Video</option>
-        </select>
-
-        <select
-          value={videoModel}
-          onChange={(e) => setVideoModel(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded text-sm mb-3"
-        >
-          <option value="VEO_3_1">Veo 3.1 (High Quality)</option>
-          <option value="VEO_3_1_FAST">Veo 3.1 Fast</option>
-        </select>
-
-        <textarea
-          value={videoPrompt}
-          onChange={(e) => setVideoPrompt(e.target.value)}
-          placeholder="Enter video prompt&#10;Example: A drone flying over a serene lake at sunrise"
-          className="w-full p-2 border border-gray-300 rounded text-sm mb-3 font-mono"
-          rows={3}
-        />
-
-        <button
-          onClick={handleGenerateVideo}
-          disabled={isLoading || !status}
-          className="w-full py-2 bg-purple-600 text-white rounded font-medium text-sm hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Starting...' : !status ? 'Not Connected' : 'Generate Video'}
-        </button>
-      </div>
-
-      {/* Activity Log */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-800">Activity Log</h2>
-          {activities.length > 0 && (
-            <button
-              onClick={() => setActivities([])}
-              className="text-xs text-gray-600 hover:text-gray-800"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="max-h-64 overflow-y-auto">
-          {activities.length === 0 ? (
-            <div className="p-4 text-center text-sm text-gray-500">No activities yet</div>
-          ) : (
-            activities.map((activity, index) => (
-              <div
-                key={index}
-                className={`p-2 border-b border-gray-100 ${getSeverityColor(activity.severity)}`}
-              >
-                <div className="text-xs font-mono text-gray-500">{activity.timestamp}</div>
-                <div className="text-xs mt-1">{activity.message}</div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+        <TabsContent value="activity" className="flex-1 m-0 h-full">
+          <ActivityLog
+            activities={activities}
+            onClear={() => setActivities([])}
+          />
+        </TabsContent>
+      </TabLayout>
     </div>
   );
 };

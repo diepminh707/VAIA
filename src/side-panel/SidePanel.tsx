@@ -24,7 +24,9 @@ const SidePanel: React.FC = () => {
   const [imagePrompts, setImagePrompts] = useState<string>('');
   const [aspectRatio, setAspectRatio] = useState<string>('IMAGE_ASPECT_RATIO_SQUARE');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const [referenceImageIds, setReferenceImageIds] = useState<string[]>([]);
+  const [subjectImageIds, setSubjectImageIds] = useState<string[]>([]);
+  const [modelImageId, setModelImageId] = useState<string[]>([]);
+  const [styleImageId, setStyleImageId] = useState<string[]>([]);
 
   // Video generation state
   const [videoPrompt, setVideoPrompt] = useState<string>('');
@@ -82,15 +84,27 @@ const SidePanel: React.FC = () => {
       return;
     }
 
-    const prompts = imagePrompts.split('\n').filter(p => p.trim()).slice(0, 4);
-
+    const prompts = [imagePrompts];
     try {
       setIsLoading(true);
       setError(null);
 
-      const refMsg = referenceImageIds.length > 0
-        ? ` with ${referenceImageIds.length} reference image(s)`
+      // Merge all reference image IDs
+      const referenceImageIds = [
+        ...subjectImageIds,
+        ...modelImageId,
+        ...styleImageId,
+      ];
+
+      // Build reference message with breakdown
+      const refParts: string[] = [];
+      if (subjectImageIds.length > 0) refParts.push(`${subjectImageIds.length} subject`);
+      if (modelImageId.length > 0) refParts.push(`${modelImageId.length} model`);
+      if (styleImageId.length > 0) refParts.push(`${styleImageId.length} style`);
+      const refMsg = refParts.length > 0
+        ? ` with ${refParts.join(', ')} image(s)`
         : '';
+
       addActivity(`🎨 Generating ${prompts.length} image(s)${refMsg}...`, 'info');
 
       const result = await generateImages({
@@ -192,8 +206,12 @@ const SidePanel: React.FC = () => {
             isLoading={isLoading}
             onGenerate={handleGenerateImages}
             status={status}
-            referenceImageIds={referenceImageIds}
-            onReferenceImagesChange={setReferenceImageIds}
+            subjectImageIds={subjectImageIds}
+            modelImageId={modelImageId}
+            styleImageId={styleImageId}
+            onSubjectImagesChange={setSubjectImageIds}
+            onModelImageChange={setModelImageId}
+            onStyleImageChange={setStyleImageId}
           />
         </TabsContent>
 

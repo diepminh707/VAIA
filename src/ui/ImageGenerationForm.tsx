@@ -15,8 +15,12 @@ interface ImageGenerationFormProps {
   isLoading: boolean;
   onGenerate: () => void;
   status: any;
-  referenceImageIds?: string[];
-  onReferenceImagesChange?: (ids: string[]) => void;
+  subjectImageIds?: string[];
+  modelImageId?: string[];
+  styleImageId?: string[];
+  onSubjectImagesChange?: (ids: string[]) => void;
+  onModelImageChange?: (ids: string[]) => void;
+  onStyleImageChange?: (ids: string[]) => void;
 }
 
 export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
@@ -28,10 +32,16 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
   isLoading,
   onGenerate,
   status,
-  referenceImageIds = [],
-  onReferenceImagesChange,
+  subjectImageIds = [],
+  modelImageId = [],
+  styleImageId = [],
+  onSubjectImagesChange,
+  onModelImageChange,
+  onStyleImageChange,
 }) => {
-  const [useReferenceImages, setUseReferenceImages] = useState(false);
+  const [useSubjectImages, setUseSubjectImages] = useState(false);
+  const [useModelImage, setUseModelImage] = useState(false);
+  const [useStyleImage, setUseStyleImage] = useState(false);
 
   return (
     <div className="flex flex-col h-full">
@@ -63,20 +73,20 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
         {/* Aspect Ratio Selector */}
         <AspectRatioSelector value={aspectRatio} onChange={setAspectRatio} />
 
-        {/* Reference Images Section */}
+        {/* Subject Images Section */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className="text-white text-sm font-bold uppercase tracking-wider">
-              Reference Images
+              Subject Images
             </label>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={useReferenceImages}
+                checked={useSubjectImages}
                 onChange={(e) => {
-                  setUseReferenceImages(e.target.checked);
-                  if (!e.target.checked && onReferenceImagesChange) {
-                    onReferenceImagesChange([]);
+                  setUseSubjectImages(e.target.checked);
+                  if (!e.target.checked && onSubjectImagesChange) {
+                    onSubjectImagesChange([]);
                   }
                 }}
                 className="sr-only peer"
@@ -84,9 +94,69 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
               <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
-          {useReferenceImages && onReferenceImagesChange && (
+          {useSubjectImages && onSubjectImagesChange && (
             <ImageUpload
-              onImagesChange={onReferenceImagesChange}
+              onImagesChange={onSubjectImagesChange}
+              aspectRatio={aspectRatio}
+              disabled={isLoading}
+            />
+          )}
+        </div>
+
+        {/* Model Image Section */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <label className="text-white text-sm font-bold uppercase tracking-wider">
+              Model Image
+            </label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useModelImage}
+                onChange={(e) => {
+                  setUseModelImage(e.target.checked);
+                  if (!e.target.checked && onModelImageChange) {
+                    onModelImageChange([]);
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          {useModelImage && onModelImageChange && (
+            <ImageUpload
+              onImagesChange={onModelImageChange}
+              aspectRatio={aspectRatio}
+              disabled={isLoading}
+            />
+          )}
+        </div>
+
+        {/* Style Image Section */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <label className="text-white text-sm font-bold uppercase tracking-wider">
+              Style Image
+            </label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useStyleImage}
+                onChange={(e) => {
+                  setUseStyleImage(e.target.checked);
+                  if (!e.target.checked && onStyleImageChange) {
+                    onStyleImageChange([]);
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          {useStyleImage && onStyleImageChange && (
+            <ImageUpload
+              onImagesChange={onStyleImageChange}
               aspectRatio={aspectRatio}
               disabled={isLoading}
             />

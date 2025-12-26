@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/button';
 import { Textarea } from '@/components/textarea';
 import { Card } from '@/components/card';
 import { AspectRatioSelector } from './AspectRatioSelector';
+import { ImageUpload } from './ImageUpload';
 
 interface ImageGenerationFormProps {
   imagePrompts: string;
@@ -14,6 +15,8 @@ interface ImageGenerationFormProps {
   isLoading: boolean;
   onGenerate: () => void;
   status: any;
+  referenceImageIds?: string[];
+  onReferenceImagesChange?: (ids: string[]) => void;
 }
 
 export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
@@ -25,7 +28,11 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
   isLoading,
   onGenerate,
   status,
+  referenceImageIds = [],
+  onReferenceImagesChange,
 }) => {
+  const [useReferenceImages, setUseReferenceImages] = useState(false);
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
@@ -55,6 +62,36 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
 
         {/* Aspect Ratio Selector */}
         <AspectRatioSelector value={aspectRatio} onChange={setAspectRatio} />
+
+        {/* Reference Images Section */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <label className="text-white text-sm font-bold uppercase tracking-wider">
+              Reference Images
+            </label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useReferenceImages}
+                onChange={(e) => {
+                  setUseReferenceImages(e.target.checked);
+                  if (!e.target.checked && onReferenceImagesChange) {
+                    onReferenceImagesChange([]);
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          {useReferenceImages && onReferenceImagesChange && (
+            <ImageUpload
+              onImagesChange={onReferenceImagesChange}
+              aspectRatio={aspectRatio}
+              disabled={isLoading}
+            />
+          )}
+        </div>
 
         {/* Generated Images */}
         {generatedImages.length > 0 && (

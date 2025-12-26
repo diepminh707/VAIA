@@ -105,6 +105,48 @@ Web apps create GoogleGenAI instances → Only API key transmitted → Extension
 - `src/content-script/` - Bridge scripts (content + injected)
 - `src/side-panel/` - React side panel UI
 - `src/popup/` - React popup UI
+- `src/components/` - Shadcn UI components (flattened structure)
+- `src/ui/` - Custom UI components (Header, Forms, Layouts)
+- `src/services/` - Business logic and API services
+- `src/lib/` - Utility functions (cn helper, etc.)
+
+### Services Architecture
+
+**Separation of Concerns**: All API logic and business logic are isolated in `src/services/`, separate from UI components.
+
+**Flow API Service** (`src/services/flowApi.ts`):
+- Core API communication with Flow through Chrome messaging
+- Functions: `testConnection()`, `generateImages()`, `generateVideo()`
+- Singleton class `FlowApiService` for state management
+- Type-safe interfaces: `ConnectionStatus`, `ImageGenerationParams`, `VideoGenerationParams`
+
+**Activity Logger Service** (`src/services/activityLogger.ts`):
+- Centralized activity logging with severity levels (info, success, warning, error)
+- Observable pattern with subscribe/unsubscribe for React integration
+- Helper methods: `success()`, `info()`, `warning()`, `error()`
+- Automatic timestamp generation and history management (max 50 entries)
+
+**Usage Pattern**:
+```typescript
+import { testConnection, generateImages } from '@/services/flowApi';
+import { activityLogger } from '@/services/activityLogger';
+
+// In components
+const status = await testConnection();
+activityLogger.success('Connected successfully');
+
+const result = await generateImages({
+  prompts: ['...'],
+  aspectRatio: '...',
+});
+```
+
+**Best Practices**:
+- ✅ UI components only handle rendering and user interactions
+- ✅ Services handle all API calls and business logic
+- ✅ Never call `chrome.runtime.sendMessage` directly from components
+- ✅ Use TypeScript types exported from services
+- ✅ Services can be tested independently from UI
 
 ## Testing Strategy
 

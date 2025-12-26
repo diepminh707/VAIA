@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import type { FlowAPIMessage, FlowAPIResponse } from '../shared/types';
 import { Header } from '@/ui/Header';
 import { TabLayout } from '@/ui/TabLayout';
 import { ImageGenerationForm } from '@/ui/ImageGenerationForm';
@@ -8,29 +7,13 @@ import { ActivityLog } from '@/ui/ActivityLog';
 import { TabsContent } from '@/components/tabs';
 import { Alert, AlertDescription } from '@/components/alert';
 import { X } from 'lucide-react';
-
-interface ConnectionStatus {
-  connected: boolean;
-  url?: string;
-  initialized?: boolean;
-  hasAuth?: boolean;
-  tokenSource?: 'nextdata' | 'fetch' | null;
-  tokenExpires?: string | null;
-  user?: {
-    name?: string;
-    email?: string;
-    image?: string;
-  } | null;
-  hasRecaptcha?: boolean;
-  sessionId?: string;
-  projectId?: string;
-}
-
-interface Activity {
-  timestamp: string;
-  message: string;
-  severity: 'info' | 'success' | 'warning' | 'error';
-}
+import {
+  testConnection,
+  generateImages,
+  generateVideo,
+  type ConnectionStatus,
+} from '@/services/flowApi';
+import type { Activity } from '@/services/activityLogger';
 
 const SidePanel: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
@@ -41,6 +24,7 @@ const SidePanel: React.FC = () => {
   const [imagePrompts, setImagePrompts] = useState<string>('');
   const [aspectRatio, setAspectRatio] = useState<string>('IMAGE_ASPECT_RATIO_SQUARE');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [referenceImageIds, setReferenceImageIds] = useState<string[]>([]);
 
   // Video generation state
   const [videoPrompt, setVideoPrompt] = useState<string>('');
@@ -59,33 +43,10 @@ const SidePanel: React.FC = () => {
     setActivities((prev) => [activity, ...prev].slice(0, 50)); // Keep last 50 activities
   };
 
-  const callFlowAPI = async (command: string, data: any = null): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      const message: FlowAPIMessage = {
-        type: 'flow_api_call',
-        payload: { command: command as any, data },
-        requestId: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      };
-
-      chrome.runtime.sendMessage(message, (response: FlowAPIResponse) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-
-        if (response.payload.success) {
-          resolve(response.payload.result);
-        } else {
-          reject(new Error(response.payload.error || 'Unknown error'));
-        }
-      });
-    });
-  };
-
   const checkConnection = async () => {
     try {
       const oldTokenSource = status?.tokenSource;
-      const result = await callFlowAPI('testConnection');
+      const result = await testConnection();
       setStatus(result);
 
       // Log token refresh if source changed or new token acquired
@@ -126,12 +87,16 @@ const SidePanel: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      addActivity(`🎨 Generating ${prompts.length} image(s)...`, 'info');
 
-      const result = await callFlowAPI('generate_image', {
+      const refMsg = referenceImageIds.length > 0
+        ? ` with ${referenceImageIds.length} reference image(s)`
+        : '';
+      addActivity(`🎨 Generating ${prompts.length} image(s)${refMsg}...`, 'info');
+
+      const result = await generateImages({
         prompts,
         aspectRatio,
-        referenceImageIds: [],
+        referenceImageIds,
       });
 
       if (result.media && result.media.length > 0) {
@@ -165,7 +130,7 @@ const SidePanel: React.FC = () => {
       setError(null);
       addActivity(`🎬 Starting video generation (${videoType})...`, 'info');
 
-      const result = await callFlowAPI('generate_video', {
+      const result = await generateVideo({
         type: videoType,
         prompt: videoPrompt,
         model: videoModel,
@@ -227,6 +192,8 @@ const SidePanel: React.FC = () => {
             isLoading={isLoading}
             onGenerate={handleGenerateImages}
             status={status}
+            referenceImageIds={referenceImageIds}
+            onReferenceImagesChange={setReferenceImageIds}
           />
         </TabsContent>
 

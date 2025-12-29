@@ -4,13 +4,17 @@ import { Button } from '@/components/button';
 import { Textarea } from '@/components/textarea';
 import { Card } from '@/components/card';
 import { AspectRatioSelector } from './AspectRatioSelector';
-import { ImageUpload } from './ImageUpload';
+import { ReferenceImageUpload } from './ReferenceImageUpload';
+import { PromptSelector } from './PromptSelector';
+import { OutputsPerPromptSelector } from './OutputsPerPromptSelector';
 
 interface ImageGenerationFormProps {
   imagePrompts: string;
   setImagePrompts: (value: string) => void;
   aspectRatio: string;
   setAspectRatio: (value: string) => void;
+  outputsPerPrompt: number;
+  setOutputsPerPrompt: (value: number) => void;
   generatedImages: string[];
   isLoading: boolean;
   onGenerate: () => void;
@@ -21,6 +25,8 @@ interface ImageGenerationFormProps {
   onSubjectImagesChange?: (ids: string[]) => void;
   onModelImageChange?: (ids: string[]) => void;
   onStyleImageChange?: (ids: string[]) => void;
+  selectedPromptId?: string | null;
+  onPromptChange?: (promptId: string | null) => void;
 }
 
 export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
@@ -28,6 +34,8 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
   setImagePrompts,
   aspectRatio,
   setAspectRatio,
+  outputsPerPrompt,
+  setOutputsPerPrompt,
   generatedImages,
   isLoading,
   onGenerate,
@@ -38,10 +46,24 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
   onSubjectImagesChange,
   onModelImageChange,
   onStyleImageChange,
+  selectedPromptId = null,
+  onPromptChange,
 }) => {
   const [useSubjectImages, setUseSubjectImages] = useState(false);
   const [useModelImage, setUseModelImage] = useState(false);
   const [useStyleImage, setUseStyleImage] = useState(false);
+
+  // Determine which image uploaders should be visible based on selected prompt
+  const shouldShowSubjectUpload = true; // Always show subject/product
+  const shouldShowModelUpload = selectedPromptId === 'product-model' || selectedPromptId === 'product-style-model';
+  const shouldShowStyleUpload = selectedPromptId === 'product-style' || selectedPromptId === 'product-style-model';
+
+  // Determine if images are required (not optional)
+  // For None (Custom): subject is optional, no model/style
+  // For System Prompts: all shown images are required
+  const isSubjectRequired = !!selectedPromptId; // Required for all system prompts, optional for None (Custom)
+  const isModelRequired = selectedPromptId === 'product-model' || selectedPromptId === 'product-style-model';
+  const isStyleRequired = selectedPromptId === 'product-style' || selectedPromptId === 'product-style-model';
 
   return (
     <div className="flex flex-col h-full">
@@ -56,112 +78,93 @@ export const ImageGenerationForm: React.FC<ImageGenerationFormProps> = ({
           </p>
         </div>
 
+        {/* System Prompt Selector */}
+        {onPromptChange && (
+          <PromptSelector
+            selectedPromptId={selectedPromptId}
+            onPromptChange={onPromptChange}
+          />
+        )}
+
         {/* Prompt Input */}
         <div className="flex flex-col gap-2">
           <label className="text-white text-sm font-bold uppercase tracking-wider">
-            Prompt
+            {selectedPromptId ? 'Your Custom Request' : 'Prompt'}
           </label>
           <Textarea
             value={imagePrompts}
             onChange={(e) => setImagePrompts(e.target.value)}
-            placeholder="Enter prompts (one per line, max 4)&#10;Example:&#10;A sunset over mountains&#10;A futuristic city"
+            placeholder={
+              selectedPromptId
+                ? "Enter your custom request here...\nExample: Create a vibrant promotional poster with warm lighting"
+                : "Enter prompts (one per line, max 4)\nExample:\nA sunset over mountains\nA futuristic city"
+            }
             className="resize-none rounded-xl text-white focus:ring-1 focus:ring-primary border-border-input bg-surface-input focus:border-primary min-h-[140px] placeholder:text-text-subtle font-mono"
             rows={4}
           />
+          {selectedPromptId && (
+            <p className="text-xs text-muted-foreground">
+              This text will be used as your custom request within the selected system prompt template
+            </p>
+          )}
         </div>
 
         {/* Aspect Ratio Selector */}
         <AspectRatioSelector value={aspectRatio} onChange={setAspectRatio} />
 
-        {/* Subject Images Section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <label className="text-white text-sm font-bold uppercase tracking-wider">
-              Subject Images
-            </label>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useSubjectImages}
-                onChange={(e) => {
-                  setUseSubjectImages(e.target.checked);
-                  if (!e.target.checked && onSubjectImagesChange) {
-                    onSubjectImagesChange([]);
-                  }
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
-          </div>
-          {useSubjectImages && onSubjectImagesChange && (
-            <ImageUpload
-              onImagesChange={onSubjectImagesChange}
-              aspectRatio={aspectRatio}
-              disabled={isLoading}
-            />
-          )}
-        </div>
+        {/* Outputs Per Prompt Selector */}
+        <OutputsPerPromptSelector value={outputsPerPrompt} onChange={setOutputsPerPrompt} />
 
-        {/* Model Image Section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <label className="text-white text-sm font-bold uppercase tracking-wider">
-              Model Image
-            </label>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useModelImage}
-                onChange={(e) => {
-                  setUseModelImage(e.target.checked);
-                  if (!e.target.checked && onModelImageChange) {
-                    onModelImageChange([]);
-                  }
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
-          </div>
-          {useModelImage && onModelImageChange && (
-            <ImageUpload
-              onImagesChange={onModelImageChange}
-              aspectRatio={aspectRatio}
-              disabled={isLoading}
-            />
-          )}
-        </div>
+        {/* Subject Images Section - Always visible (Product images required for all templates) */}
+        {onSubjectImagesChange && shouldShowSubjectUpload && (
+          <ReferenceImageUpload
+            label="Subject Images (Product)"
+            enabled={useSubjectImages}
+            onToggle={setUseSubjectImages}
+            imageIds={subjectImageIds}
+            onImagesChange={onSubjectImagesChange}
+            aspectRatio={aspectRatio}
+            disabled={isLoading}
+            maxImages={4}
+            type="subject"
+            description="Tải lên tối đa 4 ảnh sản phẩm để AI học đặc điểm tốt hơn"
+            required={isSubjectRequired}
+          />
+        )}
 
-        {/* Style Image Section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <label className="text-white text-sm font-bold uppercase tracking-wider">
-              Style Image
-            </label>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useStyleImage}
-                onChange={(e) => {
-                  setUseStyleImage(e.target.checked);
-                  if (!e.target.checked && onStyleImageChange) {
-                    onStyleImageChange([]);
-                  }
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-surface-input peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
-          </div>
-          {useStyleImage && onStyleImageChange && (
-            <ImageUpload
-              onImagesChange={onStyleImageChange}
-              aspectRatio={aspectRatio}
-              disabled={isLoading}
-            />
-          )}
-        </div>
+        {/* Model Image Section - Visible for Product+Model and Product+Style+Model */}
+        {onModelImageChange && shouldShowModelUpload && (
+          <ReferenceImageUpload
+            label="Model Image"
+            enabled={useModelImage}
+            onToggle={setUseModelImage}
+            imageIds={modelImageId}
+            onImagesChange={onModelImageChange}
+            aspectRatio={aspectRatio}
+            disabled={isLoading}
+            maxImages={1}
+            type="model"
+            description={selectedPromptId ? "Ảnh người mẫu (giữ nguyên identity)" : undefined}
+            required={isModelRequired}
+          />
+        )}
+
+        {/* Style Image Section - Visible for Product+Style and Product+Style+Model */}
+        {onStyleImageChange && shouldShowStyleUpload && (
+          <ReferenceImageUpload
+            label="Style Image"
+            enabled={useStyleImage}
+            onToggle={setUseStyleImage}
+            imageIds={styleImageId}
+            onImagesChange={onStyleImageChange}
+            aspectRatio={aspectRatio}
+            disabled={isLoading}
+            maxImages={1}
+            type="style"
+            description={selectedPromptId ? "Ảnh tham khảo layout và phong cách" : undefined}
+            required={isStyleRequired}
+          />
+        )}
 
         {/* Generated Images */}
         {generatedImages.length > 0 && (

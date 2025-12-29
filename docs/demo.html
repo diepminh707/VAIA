@@ -1,0 +1,351 @@
+<html class="dark" lang="vi"><head></head><body class="bg-background-light dark:bg-background-dark font-display text-white overflow-hidden h-screen flex flex-col">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trang Tạo Hình ảnh - AI Image Gen</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#8c2bee",
+              "background-light": "#f7f6f8",
+              "background-dark": "#191022",
+              "surface-dark": "#1a1122",
+              "surface-input": "#261933",
+              "border-dark": "#362348",
+              "border-input": "#4d3267",
+              "text-subtle": "#ad92c9"
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"],
+              "body": ["Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1122;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #362348;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4d3267;
+        }
+    </style>
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-dark bg-surface-dark px-6 py-3 shrink-0 z-20">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 flex items-center justify-center bg-primary/20 rounded-lg text-primary">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">AI Image Gen</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="hidden md:flex items-center gap-9">
+<a class="text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Thư viện</a>
+<a class="text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Cộng đồng</a>
+<a class="text-white text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Gói cước</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-input rounded-full border border-border-input">
+<span class="material-symbols-outlined text-primary text-[20px]">bolt</span>
+<span class="text-sm font-bold">42</span>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-border-dark" data-alt="User profile avatar gradient" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDzCgqY9hjVVwjQAngDw-YklkzRvSLhFASCtQcuXjPaGJIZrQHzx5IPyFvv8HCFM7fY9iFf8DKP_B3PaRVJNMfbpa2SFe2gKQwg15qYKWShhYfyoLbsM67EV_U_1Zx_CJhp1zzsIlNWSTbJECMowb5KWWtS04xoT4_Ns2bC0plcWj2RuoSIh-Z0zrphwD3kJUNfIkgMC3JDuK7Blo3abSS2WUnF1vM_xO-D1Cx8CkUsiSEui-x9cYyo82Tiu5ACbbbnF5c7NfKCZmhe");'></div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative">
+<aside class="w-full flex flex-col border-r border-border-dark bg-surface-dark overflow-y-auto shrink-0 z-10 custom-scrollbar pb-0">
+<div class="p-5 flex flex-col gap-6">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<h1 class="text-2xl font-bold leading-tight">Tạo Hình ảnh</h1>
+<p class="text-text-subtle text-sm">Biến ý tưởng thành hiện thực</p>
+</div>
+<div class="flex gap-2 p-1 bg-surface-input rounded-lg border border-border-input">
+<button class="flex-1 py-1.5 px-3 rounded-md bg-primary text-white text-sm font-medium shadow-sm transition-all text-center">Tạo Hình ảnh</button>
+<button class="flex-1 py-1.5 px-3 rounded-md text-text-subtle hover:text-white hover:bg-white/5 text-sm font-medium transition-all text-center">Tạo Video</button>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Mô tả (Prompt)</label>
+<button class="text-xs text-primary hover:text-white transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">shuffle</span> Ngẫu nhiên
+                        </button>
+</div>
+<div class="relative">
+<textarea class="form-input w-full resize-none rounded-xl text-white focus:outline-0 focus:ring-1 focus:ring-primary border border-border-input bg-surface-input focus:border-primary min-h-[140px] placeholder:text-text-subtle p-4 text-sm font-normal leading-relaxed custom-scrollbar" placeholder="Mô tả chi tiết hình ảnh bạn muốn tạo... Ví dụ: Một phi hành gia cưỡi ngựa trên sao Hỏa, phong cách cyberpunk, chi tiết cao, 8k resolution."></textarea>
+<button class="absolute bottom-3 right-3 p-1.5 rounded-lg hover:bg-white/10 text-text-subtle transition-colors" title="Thêm từ khóa phủ định">
+<span class="material-symbols-outlined text-[18px]">do_not_disturb_on</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Ảnh Chủ Thể</label>
+<div class="group/tooltip relative z-20">
+<span class="material-symbols-outlined text-[16px] text-text-subtle cursor-help hover:text-white transition-colors">info</span>
+<div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-surface-dark border border-border-input rounded-lg shadow-xl text-xs text-white w-48 text-center opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
+                                        Tải lên hình ảnh sản phẩm hoặc chủ thể chính bạn muốn giữ nguyên đặc điểm.
+                                        <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-border-input"></div>
+</div>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-surface-input border border-border-input peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-text-subtle after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white"></div>
+</label>
+</div>
+<div class="flex flex-col gap-3">
+<div class="grid grid-cols-4 gap-3">
+<div class="relative group aspect-square rounded-xl border border-border-input bg-surface-input overflow-hidden">
+<img alt="Uploaded subject 1" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCp97DDgXHKJJBJP_CFcbgnMGSNhb4WC63flVZTfwseEV7nWggdlx9jZ9w837cI5PyQpRN-EZhqHGo3nKEqK5MfFbr1Xu-AZEBrSb4RgrvFvFWrVlsojp5xO_b-nXL4Tz-xjzJ_DFNYy7JqkR5R404Qh3UzjtDuxIFNdh65dz5WkZkyMr0_NxyeNiQbmXUeKFSMmjC79RMzYZlMD5kRpGYkTpX-B7-MrUGFK9NozOCpfigSKL6eraq6OlVQktJqM54udNsanYL5nDXG"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<button class="p-1.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white transition-colors">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</div>
+<div class="relative group aspect-square rounded-xl border border-border-input bg-surface-input overflow-hidden">
+<img alt="Uploaded subject 2" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKUh_Fy9XN35Hxn8cDa2b1RNm3Z5yng0XkCl9iL3XC1psjnNbZrLfbu3RCkHTUWsqEpm0mw8-QbCCoKNUzKJBMA3ZxbZhnrCA8aQEbBJBksKIDBELefkFWay_bIX2POprHrHAiU2VpWNmm-8TH3bkjbyjbLRyB2NH4qqdvBFIUYlDDiFMJxQEDqzcm6jIueyKiO1fvCzJTt6XNsZkzm0lKn9g6VkVzRUQ-o6wHgYVmDMhlCVMhbaDnDrH5NNF8HAAZWaEX0-NAdIJb"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<button class="p-1.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white transition-colors">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</div>
+<div class="relative group aspect-square">
+<input accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple="" type="file"/>
+<div class="w-full h-full rounded-xl border border-dashed border-border-input bg-surface-input group-hover:border-primary/50 group-hover:bg-surface-input/80 transition-all flex flex-col items-center justify-center gap-1 text-text-subtle group-hover:text-primary">
+<span class="material-symbols-outlined text-[24px]">add</span>
+<span class="text-[10px] font-medium">Thêm ảnh</span>
+</div>
+</div>
+</div>
+<p class="text-xs text-text-subtle">Tải lên tối đa 4 ảnh để AI học đặc điểm tốt hơn</p>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Ảnh Người Mẫu</label>
+<div class="group/tooltip relative z-20">
+<span class="material-symbols-outlined text-[16px] text-text-subtle cursor-help hover:text-white transition-colors">info</span>
+<div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-surface-dark border border-border-input rounded-lg shadow-xl text-xs text-white w-48 text-center opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
+                                    Tải lên ảnh người mẫu để AI tạo hình ảnh dựa trên khuôn mặt hoặc dáng người.
+                                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-border-input"></div>
+</div>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-surface-input border border-border-input peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-text-subtle after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white"></div>
+</label>
+</div>
+<div class="relative group">
+<input accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" type="file"/>
+<div class="flex items-center gap-4 p-4 rounded-xl border border-border-input bg-surface-input group-hover:border-primary/50 transition-colors w-full border-dashed">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-surface-dark border border-border-dark flex items-center justify-center text-text-subtle group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px]">person_add</span>
+</div>
+<div class="flex flex-col justify-center gap-1">
+<span class="text-sm font-medium text-white group-hover:text-primary transition-colors">Thêm ảnh người mẫu</span>
+<span class="text-xs text-text-subtle">AI sẽ tạo ảnh dựa trên khuôn mặt người mẫu</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Hình ảnh tham khảo</label>
+<div class="group/tooltip relative z-20">
+<span class="material-symbols-outlined text-[16px] text-text-subtle cursor-help hover:text-white transition-colors">info</span>
+<div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-surface-dark border border-border-input rounded-lg shadow-xl text-xs text-white w-48 text-center opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none">
+                                    Sử dụng hình ảnh này làm cơ sở về bố cục hoặc màu sắc để AI sáng tạo thêm.
+                                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-border-input"></div>
+</div>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-surface-input border border-border-input peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-text-subtle after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white"></div>
+</label>
+</div>
+<div class="relative group">
+<input accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" type="file"/>
+<div class="flex items-center gap-4 p-4 rounded-xl border border-border-input bg-surface-input group-hover:border-primary/50 transition-colors w-full border-dashed">
+<div class="h-16 w-16 shrink-0 rounded-lg bg-surface-dark border border-border-dark flex items-center justify-center text-text-subtle group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px]">add_photo_alternate</span>
+</div>
+<div class="flex flex-col justify-center gap-1">
+<span class="text-sm font-medium text-white group-hover:text-primary transition-colors">Chọn hình ảnh</span>
+<span class="text-xs text-text-subtle">Sử dụng ảnh mẫu để tạo (Image-to-Image)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Tỷ lệ khung hình</label>
+<div class="grid grid-cols-4 gap-2">
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-primary bg-primary/10 hover:bg-primary/20 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<div class="border-2 border-primary w-6 h-6 rounded-sm bg-primary/20"></div>
+</div>
+<span class="text-xs font-medium text-white">1:1</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-border-input bg-surface-input hover:border-primary/50 hover:bg-surface-input/80 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<div class="border-2 border-text-subtle group-hover:border-white w-8 h-5 rounded-sm"></div>
+</div>
+<span class="text-xs font-medium text-text-subtle group-hover:text-white">16:9</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-border-input bg-surface-input hover:border-primary/50 hover:bg-surface-input/80 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<div class="border-2 border-text-subtle group-hover:border-white w-4 h-7 rounded-sm"></div>
+</div>
+<span class="text-xs font-medium text-text-subtle group-hover:text-white">9:16</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-border-input bg-surface-input hover:border-primary/50 hover:bg-surface-input/80 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<div class="border-2 border-text-subtle group-hover:border-white w-6 h-5 rounded-sm"></div>
+</div>
+<span class="text-xs font-medium text-text-subtle group-hover:text-white">4:3</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Chất lượng hình ảnh</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-primary bg-primary/10 hover:bg-primary/20 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">hd</span>
+</div>
+<span class="text-xs font-medium text-white">Bình thường</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-border-input bg-surface-input hover:border-primary/50 hover:bg-surface-input/80 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<span class="text-sm font-bold text-text-subtle group-hover:text-white">2K</span>
+</div>
+<span class="text-xs font-medium text-text-subtle group-hover:text-white">2K</span>
+</button>
+<button class="group flex flex-col items-center gap-2 p-3 rounded-lg border border-border-input bg-surface-input hover:border-primary/50 hover:bg-surface-input/80 transition-all">
+<div class="w-8 h-8 flex items-center justify-center">
+<span class="text-sm font-bold text-text-subtle group-hover:text-white">4K</span>
+</div>
+<span class="text-xs font-medium text-text-subtle group-hover:text-white">4K</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<label class="text-white text-sm font-bold uppercase tracking-wider">Phong cách</label>
+<a class="text-xs text-primary hover:text-white transition-colors" href="#">Xem tất cả</a>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square border border-border-input bg-surface-input hover:border-primary transition-all flex flex-col items-center justify-center gap-1">
+<span class="material-symbols-outlined text-text-subtle group-hover:text-white text-[28px]">block</span>
+<span class="text-xs font-medium text-text-subtle group-hover:text-white">Không có</span>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square ring-2 ring-primary ring-offset-2 ring-offset-surface-dark">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" data-alt="Anime style illustration of a girl" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCFHeKUy5SQY5PSV-zoNtzPWN4Cy99Zd1cKyFEghYJy6cR1N0tkRbmRU538qFjeydrk3iRJxg7k6Xafp-snJbWi13al6pKZAViq0LbC_-jEgDFZewg0z0Q8Rd4720Kg3clyl2aHIZvPkIL90yBI6CSRO0xHHKNmL9gc_c_F7Qar1EMry_Fq3YWx36E3y2U81FvJaA0L4nJJMJtFAnCw9rCDEh4_DWKc6R_a9z7akkRb7lcHjjr4WYIVRARDw8_J0qMdofYzVB6XWDIr");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2">
+<span class="text-xs font-bold text-white">Anime</span>
+</div>
+<div class="absolute top-1 right-1 bg-primary rounded-full p-0.5">
+<span class="material-symbols-outlined text-[12px] text-white">check</span>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square border border-transparent hover:border-primary transition-all">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110 opacity-70 group-hover:opacity-100" data-alt="Realistic photography portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCp97DDgXHKJJBJP_CFcbgnMGSNhb4WC63flVZTfwseEV7nWggdlx9jZ9w837cI5PyQpRN-EZhqHGo3nKEqK5MfFbr1Xu-AZEBrSb4RgrvFvFWrVlsojp5xO_b-nXL4Tz-xjzJ_DFNYy7JqkR5R404Qh3UzjtDuxIFNdh65dz5WkZkyMr0_NxyeNiQbmXUeKFSMmjC79RMzYZlMD5kRpGYkTpX-B7-MrUGFK9NozOCpfigSKL6eraq6OlVQktJqM54udNsanYL5nDXG");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2">
+<span class="text-xs font-medium text-white/90 group-hover:text-white">Thực tế</span>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square border border-transparent hover:border-primary transition-all">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110 opacity-70 group-hover:opacity-100" data-alt="3D Abstract shape render" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCKUh_Fy9XN35Hxn8cDa2b1RNm3Z5yng0XkCl9iL3XC1psjnNbZrLfbu3RCkHTUWsqEpm0mw8-QbCCoKNUzKJBMA3ZxbZhnrCA8aQEbBJBksKIDBELefkFWay_bIX2POprHrHAiU2VpWNmm-8TH3bkjbyjbLRyB2NH4qqdvBFIUYlDDiFMJxQEDqzcm6jIueyKiO1fvCzJTt6XNsZkzm0lKn9g6VkVzRUQ-o6wHgYVmDMhlCVMhbaDnDrH5NNF8HAAZWaEX0-NAdIJb");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2">
+<span class="text-xs font-medium text-white/90 group-hover:text-white">3D Render</span>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square border border-transparent hover:border-primary transition-all">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110 opacity-70 group-hover:opacity-100" data-alt="Classic oil painting texture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCevybB_J9mKB7fAQiI-cNdwcAa88TOOlvFX2QXnN2zX9qd4-KaSNHKhm5aSGLxBjRcRrNwvpEhzMuQywVRgW2iELp2vcpfZkssLalWH9nou_FTClU0wo4RhFUAk25EVJz6YCFKPrXnY-mr3HOQgqNNcxEmH3LhVXgIk-2ZKy6ejl47JHLa1SGjOx7TX26bZvKrpWF4G6IebkcGHpimqdxdm5e3RsQozhgfQ4N0Yc_JpyIeh4DlylkY1J4dMhZ4rEcI4pK6pgk-CyN_");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2">
+<span class="text-xs font-medium text-white/90 group-hover:text-white">Sơn dầu</span>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square border border-transparent hover:border-primary transition-all">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110 opacity-70 group-hover:opacity-100" data-alt="Neon cyberpunk city lights" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-k8gEoIj1bgQns8q45tRZhhc7x7cgsTbTrxX-Z3ks8my6a-h8EcxbJ-wNorSq9vz-00dozb9k6u5kPrHBO7ZCdu3BcJIgfa6fpC3TR9DbxYZQcguzIjPwPbdFeND_Mz487EalOPZ3Cg-H6yqZyvmIQafqaJysMDX5-erH6e6oDx_TI9__9uh_PFrF98AfIYwXd8WDT1DZY-qLulZOLpNP-o1XwQVwn4AasgwXGZ8I2AdNt0kvU_R-5c5_AmdoV1lwbTNth9dgfI91");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2">
+<span class="text-xs font-medium text-white/90 group-hover:text-white">Cyberpunk</span>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-lg aspect-square border border-transparent hover:border-primary transition-all">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110 opacity-70 group-hover:opacity-100" data-alt="Black and white sketch" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDGCYDlqV2Zu16iZmz6D0j4756_DPuaP3fUs803NOQy5wxMpT0V5QuBhrh_aaB8qKAykIFc6fIxWgAD8llQ8iM0v4n06eJSROJ-Jno_I6G8jxg4VU5_a7NYCp4rKvFqBVrkBMkK0752lwNxUJ5ZyTGbk-8cZv-rossPWctLe9Ffw0NE_XIntcynB9EG9v3KuuLDsOpvc_xFIB1zR7f25PTUsQ-DuhWin_9ay4o_M08IwS57m5wGqQWU_1Uim8YCmn5F0MKco-xVOFwK");'></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2">
+<span class="text-xs font-medium text-white/90 group-hover:text-white">Phác thảo</span>
+</div>
+</div>
+</div>
+</div>
+<div class="border-t border-border-input pt-4 mt-2">
+<details class="group">
+<summary class="flex justify-between items-center cursor-pointer list-none text-text-subtle hover:text-white transition-colors">
+<span class="text-sm font-bold uppercase tracking-wider">Cài đặt nâng cao</span>
+<span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="pt-4 flex flex-col gap-4 animate-in slide-in-from-top-2 fade-in duration-200">
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-xs text-text-subtle">
+<span>CFG Scale</span>
+<span>7.0</span>
+</div>
+<input class="w-full h-1.5 bg-surface-input rounded-lg appearance-none cursor-pointer [&amp;::-webkit-slider-thumb]:appearance-none [&amp;::-webkit-slider-thumb]:w-3 [&amp;::-webkit-slider-thumb]:h-3 [&amp;::-webkit-slider-thumb]:rounded-full [&amp;::-webkit-slider-thumb]:bg-primary" max="20" min="1" type="range" value="7"/>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-xs text-text-subtle">
+<span>Steps</span>
+<span>30</span>
+</div>
+<input class="w-full h-1.5 bg-surface-input rounded-lg appearance-none cursor-pointer [&amp;::-webkit-slider-thumb]:appearance-none [&amp;::-webkit-slider-thumb]:w-3 [&amp;::-webkit-slider-thumb]:h-3 [&amp;::-webkit-slider-thumb]:rounded-full [&amp;::-webkit-slider-thumb]:bg-primary" max="150" min="10" type="range" value="30"/>
+</div>
+<label class="flex flex-col gap-2">
+<span class="text-xs text-text-subtle">Seed</span>
+<div class="flex gap-2">
+<input class="form-input flex-1 h-9 bg-surface-input border border-border-input rounded-lg text-sm text-white px-3 focus:ring-1 focus:ring-primary focus:border-primary" placeholder="-1 (Ngẫu nhiên)" type="number"/>
+<button class="h-9 w-9 flex items-center justify-center rounded-lg border border-border-input hover:bg-white/5 text-text-subtle">
+<span class="material-symbols-outlined text-[18px]">casino</span>
+</button>
+</div>
+</label>
+</div>
+</details>
+</div>
+<div class="flex-1 min-h-[20px]"></div>
+</div>
+<div class="sticky bottom-0 p-5 bg-surface-dark/95 backdrop-blur-sm border-t border-border-dark">
+<button class="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-lg font-bold text-base shadow-[0_0_20px_-5px_#8c2bee] hover:shadow-[0_0_25px_-5px_#8c2bee] transition-all flex items-center justify-center gap-2 group">
+<span class="material-symbols-outlined group-hover:animate-pulse">auto_awesome</span>
+<span>Tạo Hình ảnh</span>
+<span class="bg-black/20 text-xs px-2 py-0.5 rounded text-white/80 font-medium ml-1">4 <span class="material-symbols-outlined text-[10px] inline align-middle">bolt</span></span>
+</button>
+</div>
+</aside>
+</div>
+</body></html>

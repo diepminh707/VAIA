@@ -26,6 +26,7 @@ export interface ImageGenerationParams {
   prompts: string[];
   aspectRatio: string;
   referenceImageIds?: string[];
+  systemPromptId?: string; // Optional system prompt template ID
 }
 
 export interface VideoGenerationParams {

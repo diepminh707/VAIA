@@ -14,6 +14,7 @@ import {
   type ConnectionStatus,
 } from '@/services/flowApi';
 import type { Activity } from '@/services/activityLogger';
+import { composePrompt, getSystemPromptById } from '@/lib/promptUtils';
 
 const SidePanel: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
@@ -23,10 +24,12 @@ const SidePanel: React.FC = () => {
   // Image generation state
   const [imagePrompts, setImagePrompts] = useState<string>('');
   const [aspectRatio, setAspectRatio] = useState<string>('IMAGE_ASPECT_RATIO_SQUARE');
+  const [outputsPerPrompt, setOutputsPerPrompt] = useState<number>(1);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [subjectImageIds, setSubjectImageIds] = useState<string[]>([]);
   const [modelImageId, setModelImageId] = useState<string[]>([]);
   const [styleImageId, setStyleImageId] = useState<string[]>([]);
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
 
   // Video generation state
   const [videoPrompt, setVideoPrompt] = useState<string>('');
@@ -84,10 +87,49 @@ const SidePanel: React.FC = () => {
       return;
     }
 
-    const prompts = [imagePrompts];
+    // Validate required images based on selected prompt
+    if (selectedPromptId) {
+      const missingImages: string[] = [];
+
+      // All system prompts require subject/product images
+      if (subjectImageIds.length === 0) {
+        missingImages.push('Subject Images (Product)');
+      }
+
+      // Check model image requirement
+      if ((selectedPromptId === 'product-model' || selectedPromptId === 'product-style-model') && modelImageId.length === 0) {
+        missingImages.push('Model Image');
+      }
+
+      // Check style image requirement
+      if ((selectedPromptId === 'product-style' || selectedPromptId === 'product-style-model') && styleImageId.length === 0) {
+        missingImages.push('Style Image');
+      }
+
+      if (missingImages.length > 0) {
+        const errorMsg = `Missing required images: ${missingImages.join(', ')}`;
+        setError(errorMsg);
+        addActivity(`❌ ${errorMsg}`, 'error');
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
       setError(null);
+
+      // Compose final prompt (system template + user text if template selected)
+      let finalPrompt: string;
+      if (selectedPromptId) {
+        finalPrompt = composePrompt(selectedPromptId, imagePrompts);
+        const promptTemplate = getSystemPromptById(selectedPromptId);
+        addActivity(`📋 Using system prompt: ${promptTemplate?.name}`, 'info');
+      } else {
+        finalPrompt = imagePrompts;
+      }
+
+      // Duplicate the prompt based on outputsPerPrompt selection
+      const prompts = Array(outputsPerPrompt).fill(finalPrompt);
 
       // Merge all reference image IDs
       const referenceImageIds = [
@@ -105,7 +147,10 @@ const SidePanel: React.FC = () => {
         ? ` with ${refParts.join(', ')} image(s)`
         : '';
 
-      addActivity(`🎨 Generating ${prompts.length} image(s)${refMsg}...`, 'info');
+      const outputMsg = outputsPerPrompt > 1
+        ? ` (${outputsPerPrompt} outputs per prompt)`
+        : '';
+      addActivity(`🎨 Generating ${prompts.length} image(s)${outputMsg}${refMsg}...`, 'info');
 
       const result = await generateImages({
         prompts,
@@ -202,6 +247,8 @@ const SidePanel: React.FC = () => {
             setImagePrompts={setImagePrompts}
             aspectRatio={aspectRatio}
             setAspectRatio={setAspectRatio}
+            outputsPerPrompt={outputsPerPrompt}
+            setOutputsPerPrompt={setOutputsPerPrompt}
             generatedImages={generatedImages}
             isLoading={isLoading}
             onGenerate={handleGenerateImages}
@@ -212,6 +259,8 @@ const SidePanel: React.FC = () => {
             onSubjectImagesChange={setSubjectImageIds}
             onModelImageChange={setModelImageId}
             onStyleImageChange={setStyleImageId}
+            selectedPromptId={selectedPromptId}
+            onPromptChange={setSelectedPromptId}
           />
         </TabsContent>
 

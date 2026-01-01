@@ -63,13 +63,10 @@ export const PromptSelector: React.FC<PromptSelectorProps> = ({
             {getSelectedPromptDisplay()}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent className="bg-surface-dark border-border-dark">
+        <SelectContent>
           <SelectGroup>
-            <SelectLabel className="text-text-subtle">Available Templates</SelectLabel>
-            <SelectItem
-              value="none"
-              className="cursor-pointer text-white hover:bg-surface-input focus:bg-surface-input focus:text-white data-[highlighted]:bg-surface-input data-[highlighted]:text-white py-3"
-            >
+            <SelectLabel>Available Templates</SelectLabel>
+            <SelectItem value="none" className="py-3">
               <div className="flex flex-col items-start gap-0.5">
                 <span className="font-medium">None (Custom)</span>
                 <span className="text-xs text-muted-foreground">
@@ -81,7 +78,7 @@ export const PromptSelector: React.FC<PromptSelectorProps> = ({
               <SelectItem
                 key={prompt.id}
                 value={prompt.id}
-                className="cursor-pointer text-white hover:bg-surface-input focus:bg-surface-input focus:text-white data-[highlighted]:bg-surface-input data-[highlighted]:text-white py-3"
+                className="py-3"
               >
                 <div className="flex flex-col items-start gap-0.5">
                   <span className="font-medium">{prompt.name}</span>

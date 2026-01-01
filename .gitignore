@@ -15,3 +15,5 @@ yarn-error.log*
 *~
 .cache/
 .vite/
+
+example.local/

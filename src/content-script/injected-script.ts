@@ -26,6 +26,7 @@ const pendingRequests = new Map<
 
 const FLOW_API_BASE = 'https://aisandbox-pa.googleapis.com';
 const FLOW_RECAPTCHA_SITE_KEY = '6LdsFiUsAAAAAIjVDZcuLhaHiDn5nnHVXVRQGeMV';
+const GOOGLE_API_KEY = 'AIzaSyBtrm0o5ab1c-Ec8ZuLcGt3oJAA5VWt3pY';
 
 // Flow authentication context - captured from page
 const flowAuthContext = {
@@ -423,6 +424,131 @@ async function uploadImage(request: any): Promise<any> {
   return callFlowAPI('/v1:uploadUserImage', payload);
 }
 
+// Media History API - Fetch user's uploaded/generated media
+async function fetchMediaHistory(
+  pageSize: number = 18,
+  cursor: string | null = null
+): Promise<any> {
+  console.log('[VAIA] 📚 Fetching media history...', { pageSize, cursor });
+
+  // Build tRPC input according to Flow's format
+  const input = {
+    json: {
+      type: 'ASSET_MANAGER',
+      pageSize,
+      responseScope: 'RESPONSE_SCOPE_UNSPECIFIED',
+      cursor
+    },
+    meta: {
+      values: {
+        cursor: ['undefined']  // Flow expects this format
+      }
+    }
+  };
+
+  // Encode input for URL (tRPC requirement)
+  const encodedInput = encodeURIComponent(JSON.stringify(input));
+  const url = `https://labs.google/fx/api/trpc/media.fetchUserHistoryDirectly?input=${encodedInput}`;
+
+  console.log('[VAIA] 📤 Calling tRPC media history endpoint');
+
+  try {
+    // Call tRPC endpoint with session cookies
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'accept': '*/*',
+        'content-type': 'application/json'
+      },
+      credentials: 'include'  // ✅ Include session cookies for authentication
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[VAIA] ❌ Media history API error:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('[VAIA] 📥 Received media history response');
+
+    // Extract workflows from deeply nested tRPC response structure
+    const result = data?.result?.data?.json?.result;
+
+    if (!result || !Array.isArray(result.userWorkflows)) {
+      console.error('[VAIA] ❌ Invalid response structure:', data);
+      throw new Error('Invalid response structure from media history API');
+    }
+
+    console.log(`[VAIA] ✅ Found ${result.userWorkflows.length} media items`);
+
+    return {
+      userWorkflows: result.userWorkflows,
+      status: data.result?.data?.json?.status || 200,
+      statusText: data.result?.data?.json?.statusText || 'OK'
+    };
+  } catch (error) {
+    console.error('[VAIA] ❌ Failed to fetch media history:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch detailed media information by media ID
+ * @param mediaId - Media generation ID (e.g., "CAMaJD...")
+ * @param tool - Client context tool (default: 'PINHOLE')
+ */
+async function fetchMediaDetails(
+  mediaId: string,
+  tool: string = 'PINHOLE'
+): Promise<any> {
+  console.log('[VAIA] 🔍 Fetching media details...', { mediaId, tool });
+
+  // Build URL with Google API key
+  const params = new URLSearchParams({
+    key: GOOGLE_API_KEY,
+    'clientContext.tool': tool
+  });
+
+  const url = `${FLOW_API_BASE}/v1/media/${encodeURIComponent(mediaId)}?${params.toString()}`;
+  console.log('[VAIA] 📤 Calling media details API');
+
+  // Build headers with Authorization token
+  const headers: Record<string, string> = {
+    'accept': '*/*'
+  };
+
+  // Add Authorization header if we have a token
+  if (flowAuthContext.authToken) {
+    headers['Authorization'] = `Bearer ${flowAuthContext.authToken}`;
+    console.log('[VAIA] 🔑 Using Authorization token');
+  } else {
+    console.warn('[VAIA] ⚠️ No auth token available for media details request');
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[VAIA] ❌ Media details API error:', errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('[VAIA] 📥 Received media details response');
+    console.log('[VAIA] ✅ Media details fetched successfully');
+
+    return data;
+  } catch (error) {
+    console.error('[VAIA] ❌ Failed to fetch media details:', error);
+    throw error;
+  }
+}
+
 // Main video generation router
 async function generateVideo(request: any): Promise<any> {
   const { type } = request;
@@ -747,6 +873,21 @@ window.addEventListener('flowExtensionCommand', async (event: Event) => {
 
       case 'upload_image':
         result = await uploadImage(data);
+        authContext = getFlowAuthStatus();
+        break;
+
+      case 'fetch_media_history':
+        const { pageSize = 18, cursor = null } = (data as any) || {};
+        result = await fetchMediaHistory(pageSize, cursor);
+        authContext = getFlowAuthStatus();
+        break;
+
+      case 'fetch_media_details':
+        const { mediaId, tool = 'PINHOLE' } = (data as any) || {};
+        if (!mediaId) {
+          throw new Error('mediaId is required for fetch_media_details');
+        }
+        result = await fetchMediaDetails(mediaId, tool);
         authContext = getFlowAuthStatus();
         break;
 

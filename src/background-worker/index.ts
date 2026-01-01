@@ -47,25 +47,9 @@ const executeChromAPI = async (
 
 console.log('[VAIA] Background service worker started');
 
-// Track Flow tab ID
-let flowTabId: number | null = null;
-
-// Monitor tab updates to detect Flow page
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    if (tab.url.includes('labs.google.com/fx') || tab.url.includes('labs.google/fx')) {
-      console.log('[VAIA] Flow page detected:', tab.url);
-      flowTabId = tabId;
-    }
-  }
-});
-
-// Clean up when tabs are closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-  if (tabId === flowTabId) {
-    console.log('[VAIA] Flow tab closed');
-    flowTabId = null;
-  }
+// Configure side panel to be tab-specific
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => {
+  console.error('[VAIA] Failed to set panel behavior:', error);
 });
 
 // Handle extension install/update - inject into already-open Flow tabs
@@ -110,41 +94,51 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
 chrome.runtime.onMessage.addListener(
   (message: ExtensionMessage, sender, sendResponse) => {
-    console.log('[VAIA] Background Worker received message:', message);
+    console.log('[VAIA] Background Worker received message:', message, 'from sender:', sender);
 
     // Handle Flow API calls from side panel
     if (message.type === 'flow_api_call') {
       const flowMessage = message as FlowAPIMessage;
       const requestId = flowMessage.requestId || generateRequestId();
 
-      // Find Flow tab - prioritize tracked flowTabId, then search all tabs
+      // Find Flow tab - prioritize sender tab and active tab only
+      // Use tab IDs for reliable identification, not URLs
       const findFlowTab = async () => {
-        // Strategy 1: Use tracked Flow tab ID
-        if (flowTabId !== null) {
+        // Strategy 1: Use sender's tab ID (most reliable - tab-specific side panel)
+        if (sender.tab?.id) {
           try {
-            const tab = await chrome.tabs.get(flowTabId);
-            if (tab && (tab.url?.includes('labs.google.com/fx') || tab.url?.includes('labs.google/fx'))) {
-              console.log('[VAIA] Using tracked Flow tab:', tab.url);
-              return tab;
+            // Get fresh tab data by ID to ensure it's still valid
+            const senderTab = await chrome.tabs.get(sender.tab.id);
+            if (senderTab.url?.includes('labs.google.com/fx') || senderTab.url?.includes('labs.google/fx')) {
+              console.log(`[VAIA] ✅ Using sender tab ID: ${senderTab.id} (${senderTab.url})`);
+              return senderTab;
+            } else {
+              console.log(`[VAIA] ⚠️ Sender tab ID: ${senderTab.id} is not a Flow page`);
             }
           } catch (e) {
-            console.log('[VAIA] Tracked Flow tab no longer valid');
-            flowTabId = null;
+            console.log('[VAIA] ⚠️ Sender tab no longer exists');
           }
         }
 
-        // Strategy 2: Query all tabs to find Flow page
-        const tabs = await chrome.tabs.query({});
-        const flowTab = tabs.find(tab =>
-          tab.url?.includes('labs.google.com/fx') || tab.url?.includes('labs.google/fx')
-        );
+        // Strategy 2: Use active tab in current window (user's focus)
+        try {
+          const [activeTab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          });
 
-        if (flowTab) {
-          console.log('[VAIA] Found Flow tab via query:', flowTab.url);
-          flowTabId = flowTab.id || null;
-          return flowTab;
+          if (activeTab?.id && (activeTab.url?.includes('labs.google.com/fx') || activeTab.url?.includes('labs.google/fx'))) {
+            console.log(`[VAIA] ✅ Using active tab ID: ${activeTab.id} (${activeTab.url})`);
+            return activeTab;
+          } else if (activeTab) {
+            console.log(`[VAIA] ⚠️ Active tab ID: ${activeTab.id} is not a Flow page`);
+          }
+        } catch (e) {
+          console.log('[VAIA] ⚠️ Failed to get active tab:', e);
         }
 
+        // No valid Flow tab found - fail explicitly instead of guessing
+        console.warn('[VAIA] ❌ No valid Flow tab found in current context');
         return null;
       };
 
@@ -155,12 +149,15 @@ chrome.runtime.onMessage.addListener(
             payload: {
               requestId,
               success: false,
-              error: 'Flow tab not found. Please open https://labs.google.com/fx/tools/flow/ first.',
+              error: 'No Flow tab found in current context. Please open the extension side panel from a Flow project page (https://labs.google.com/fx/tools/flow/).',
             },
           };
           sendResponse(errorResponse);
           return;
         }
+
+        console.log(`[VAIA] 📤 Sending message to tab ID: ${flowTab.id}`);
+
 
         // Forward to content script which will communicate with injected script
         chrome.tabs.sendMessage(flowTab.id, flowMessage, (response: FlowAPIResponse) => {

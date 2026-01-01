@@ -77,11 +77,58 @@ export interface FlowImageUploadRequest {
   aspectRatio?: string;  // Aspect ratio for uploaded image
 }
 
+export interface FlowMediaHistoryRequest {
+  pageSize?: number;        // Number of items per page (default: 18)
+  cursor?: string | null;   // Pagination cursor (null for first page)
+}
+
+export interface MediaGenerationId {
+  mediaType: 'IMAGE';
+  workflowId: string;       // UUID - unique workflow identifier
+  workflowStepId: string;   // Step identifier (usually 'CAE')
+  mediaKey: string;         // UUID - unique media asset key
+}
+
+export interface MediaObject {
+  name: string;             // Base64-encoded workflow name
+  userUploadedImage: {
+    aspectRatio: string;    // IMAGE_ASPECT_RATIO_*
+  };
+  mediaGenerationId: MediaGenerationId;
+}
+
+export interface MediaWorkflow {
+  name: string;             // Base64-encoded identifier
+  media: MediaObject;
+  createTime: string;       // ISO 8601 timestamp
+}
+
+export interface FlowMediaHistoryResult {
+  userWorkflows: MediaWorkflow[];
+  status: number;           // HTTP status (200 = success)
+  statusText: string;       // 'OK'
+}
+
+export interface FlowMediaDetailRequest {
+  mediaId: string;          // Media generation ID (format: "CAMa...")
+  tool?: string;            // Client context tool (default: 'PINHOLE')
+}
+
+export interface FlowMediaDetailResponse {
+  image?: string;           // Base64-encoded JPEG image
+  mediaGenerationId: string; // Full media generation identifier
+  fifeUrl?: string;         // Google Fife CDN URL with signed access
+  aspectRatio?: string;     // IMAGE_ASPECT_RATIO_*
+  userUploadedImage?: {
+    fileUrl: string;        // Direct file URL for display
+  };
+}
+
 export interface FlowAPIMessage extends ExtensionMessage {
   type: 'flow_api_call';
   payload: {
-    command: 'generate_image' | 'generate_video' | 'upload_image' | 'get_auth_status';
-    data: FlowImageGenerateRequest | FlowVideoGenerateRequest | FlowImageUploadRequest | null;
+    command: 'generate_image' | 'generate_video' | 'upload_image' | 'get_auth_status' | 'fetch_media_history' | 'fetch_media_details';
+    data: FlowImageGenerateRequest | FlowVideoGenerateRequest | FlowImageUploadRequest | FlowMediaHistoryRequest | FlowMediaDetailRequest | null;
   };
 }
 

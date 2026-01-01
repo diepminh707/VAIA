@@ -49,6 +49,49 @@ export interface ImageUploadResponse {
   height: number;
 }
 
+export interface MediaHistoryParams {
+  pageSize?: number;
+  cursor?: string | null;
+}
+
+export interface MediaWorkflow {
+  name: string;
+  media: {
+    name: string;
+    userUploadedImage: {
+      aspectRatio: string;
+    };
+    mediaGenerationId: {
+      mediaType: 'IMAGE';
+      workflowId: string;
+      workflowStepId: string;
+      mediaKey: string;
+    };
+  };
+  createTime: string;
+}
+
+export interface MediaHistoryResult {
+  userWorkflows: MediaWorkflow[];
+  status: number;
+  statusText: string;
+}
+
+export interface MediaDetailParams {
+  mediaId: string;
+  tool?: string;
+}
+
+export interface MediaDetailResponse {
+  image?: string;
+  mediaGenerationId: string;
+  fifeUrl?: string;
+  aspectRatio?: string;
+  userUploadedImage?: {
+    fifeUrl: string;
+  };
+}
+
 /**
  * Core API call function
  * Sends a message to the background worker and waits for response
@@ -121,6 +164,27 @@ export const uploadImage = async (params: ImageUploadParams): Promise<string> =>
 };
 
 /**
+ * Fetch user's media history (uploaded/generated images)
+ */
+export const fetchMediaHistory = async (params?: MediaHistoryParams): Promise<MediaHistoryResult> => {
+  return await callFlowAPI('fetch_media_history', {
+    pageSize: params?.pageSize || 18,
+    cursor: params?.cursor || null,
+  });
+};
+
+/**
+ * Fetch detailed media information by media ID
+ * Returns fileUrl, base64 image, and other media metadata
+ */
+export const fetchMediaDetails = async (params: MediaDetailParams): Promise<MediaDetailResponse> => {
+  return await callFlowAPI('fetch_media_details', {
+    mediaId: params.mediaId,
+    tool: params.tool || 'PINHOLE',
+  });
+};
+
+/**
  * Flow API Service class for managing connections and requests
  */
 export class FlowApiService {
@@ -161,6 +225,14 @@ export class FlowApiService {
 
   async uploadImage(params: ImageUploadParams): Promise<string> {
     return await uploadImage(params);
+  }
+
+  async fetchMediaHistory(params?: MediaHistoryParams): Promise<MediaHistoryResult> {
+    return await fetchMediaHistory(params);
+  }
+
+  async fetchMediaDetails(params: MediaDetailParams): Promise<MediaDetailResponse> {
+    return await fetchMediaDetails(params);
   }
 }
 

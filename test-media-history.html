@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Media History API</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+    .status.success {
+      background: #e8f5e9;
+      color: #388e3c;
+    }
+    .status.error {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .media-item {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      background: white;
+    }
+    .media-item img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #f0f0f0;
+    }
+    .media-info {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+    .media-info div {
+      margin: 4px 0;
+    }
+    .aspect-ratio {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1976d2;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .json-output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    pre {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖼️ Test Media History API</h1>
+
+    <div class="controls">
+      <label>
+        Page Size:
+        <input type="number" id="pageSize" value="18" min="1" max="50">
+      </label>
+      <button id="fetchBtn">Fetch Media History</button>
+      <button id="clearBtn">Clear Results</button>
+    </div>
+
+    <div id="status"></div>
+
+    <h2>Media Library</h2>
+    <div id="mediaGrid" class="media-grid"></div>
+
+    <h2>Raw JSON Response</h2>
+    <div class="json-output">
+      <pre id="jsonOutput">Click "Fetch Media History" to see results...</pre>
+    </div>
+  </div>
+
+  <script>
+    const statusDiv = document.getElementById('status');
+    const mediaGrid = document.getElementById('mediaGrid');
+    const jsonOutput = document.getElementById('jsonOutput');
+    const fetchBtn = document.getElementById('fetchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const pageSizeInput = document.getElementById('pageSize');
+
+    function showStatus(message, type = 'info') {
+      statusDiv.className = `status ${type}`;
+      statusDiv.textContent = message;
+    }
+
+    async function fetchMediaHistory() {
+      try {
+        fetchBtn.disabled = true;
+        showStatus('🔄 Fetching media history...', 'info');
+
+        const pageSize = parseInt(pageSizeInput.value) || 18;
+
+        // Call extension API
+        chrome.runtime.sendMessage(
+          {
+            type: 'flow_api_call',
+            payload: {
+              command: 'fetch_media_history',
+              data: {
+                pageSize: pageSize,
+                cursor: null
+              }
+            }
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              showStatus(`❌ Extension error: ${chrome.runtime.lastError.message}`, 'error');
+              console.error('Extension error:', chrome.runtime.lastError);
+              fetchBtn.disabled = false;
+              return;
+            }
+
+            if (response.payload.success) {
+              const result = response.payload.result;
+              const { userWorkflows, status, statusText } = result;
+
+              showStatus(`✅ Success! Loaded ${userWorkflows.length} media items (${status} ${statusText})`, 'success');
+
+              // Display JSON
+              jsonOutput.textContent = JSON.stringify(result, null, 2);
+
+              // Display media grid
+              displayMediaGrid(userWorkflows);
+
+              console.log('Media History Result:', result);
+            } else {
+              showStatus(`❌ API Error: ${response.payload.error}`, 'error');
+              jsonOutput.textContent = JSON.stringify(response.payload, null, 2);
+              console.error('API error:', response.payload.error);
+            }
+
+            fetchBtn.disabled = false;
+          }
+        );
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+        console.error('Fetch error:', error);
+        fetchBtn.disabled = false;
+      }
+    }
+
+    function displayMediaGrid(workflows) {
+      mediaGrid.innerHTML = '';
+
+      if (workflows.length === 0) {
+        mediaGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999;">No media found</p>';
+        return;
+      }
+
+      workflows.forEach(workflow => {
+        const { media, createTime } = workflow;
+        const { mediaKey, workflowId } = media.mediaGenerationId;
+        const { aspectRatio } = media.userUploadedImage;
+
+        const item = document.createElement('div');
+        item.className = 'media-item';
+
+        // Construct media URL (may need adjustment based on your project)
+        const mediaUrl = `https://labs.google/fx/media/${mediaKey}`;
+
+        item.innerHTML = `
+          <img src="${mediaUrl}" alt="Media ${mediaKey}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22><rect fill=%22%23ddd%22 width=%22200%22 height=%22150%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2214%22>Image not found</text></svg>'">
+          <div class="media-info">
+            <div><span class="aspect-ratio">${formatAspectRatio(aspectRatio)}</span></div>
+            <div><strong>Media Key:</strong> ${mediaKey.substring(0, 8)}...</div>
+            <div><strong>Created:</strong> ${new Date(createTime).toLocaleDateString()}</div>
+          </div>
+        `;
+
+        mediaGrid.appendChild(item);
+      });
+    }
+
+    function formatAspectRatio(aspectRatio) {
+      return aspectRatio
+        .replace('IMAGE_ASPECT_RATIO_', '')
+        .replace(/_/g, ' ')
+        .toLowerCase();
+    }
+
+    function clearResults() {
+      mediaGrid.innerHTML = '';
+      jsonOutput.textContent = 'Click "Fetch Media History" to see results...';
+      statusDiv.className = '';
+      statusDiv.textContent = '';
+    }
+
+    // Event listeners
+    fetchBtn.addEventListener('click', fetchMediaHistory);
+    clearBtn.addEventListener('click', clearResults);
+
+    // Initial status check
+    showStatus('ℹ️ Open this page with Flow tab active, then click "Fetch Media History"', 'info');
+  </script>
+</body>
+</html>

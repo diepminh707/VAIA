@@ -2,17 +2,7 @@ import React from 'react';
 import { RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/button';
 import { Badge } from '@/components/badge';
-
-interface ConnectionStatus {
-  connected: boolean;
-  tokenExpires?: string | null;
-  user?: {
-    name?: string;
-    email?: string;
-    image?: string;
-  } | null;
-  projectId?: string;
-}
+import type { ConnectionStatus } from '@/services/flowApi';
 
 interface HeaderProps {
   status: ConnectionStatus | null;
@@ -38,12 +28,24 @@ export const Header: React.FC<HeaderProps> = ({ status, onReconnect, isLoading }
         {/* Connected Status Badge */}
         <div className="flex items-center gap-2">
           {status ? (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-surface-input rounded border border-border-input/50">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              <span className="text-xs font-medium text-text-subtle">Connected</span>
+            <div className="flex items-center gap-2">
+              {/* Project ID - Outside border */}
+              {status.projectId && (
+                <span className="text-xs font-medium text-text-subtle">
+                  {status.projectId.substring(0, 8)}...
+                </span>
+              )}
+
+              {/* Connected Badge - Inside border */}
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-surface-input rounded border border-border-input/50">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-xs font-medium text-text-subtle">
+                  • Connected
+                </span>
+              </div>
             </div>
           ) : (
             <Badge variant="destructive" className="text-xs">

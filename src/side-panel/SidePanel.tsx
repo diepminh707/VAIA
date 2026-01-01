@@ -3,6 +3,7 @@ import { Header } from '@/ui/Header';
 import { TabLayout } from '@/ui/TabLayout';
 import { ImageGenerationForm } from '@/ui/ImageGenerationForm';
 import { VideoGenerationForm } from '@/ui/VideoGenerationForm';
+import { MediaLibrary } from '@/ui/MediaLibrary';
 import { ActivityLog } from '@/ui/ActivityLog';
 import { TabsContent } from '@/components/tabs';
 import { Alert, AlertDescription } from '@/components/alert';
@@ -15,6 +16,7 @@ import {
 } from '@/services/flowApi';
 import type { Activity } from '@/services/activityLogger';
 import { composePrompt, getSystemPromptById } from '@/lib/promptUtils';
+import { MediaProvider } from '@/contexts/MediaContext';
 
 const SidePanel: React.FC = () => {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
@@ -215,77 +217,83 @@ const SidePanel: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen dark bg-background-dark overflow-hidden">
-      {/* Header */}
-      <Header
-        status={status}
-        onReconnect={checkConnection}
-        isLoading={isLoading}
-      />
+    <MediaProvider>
+      <div className="flex flex-col h-screen dark bg-background-dark overflow-hidden">
+        {/* Header */}
+        <Header
+          status={status}
+          onReconnect={checkConnection}
+          isLoading={isLoading}
+        />
 
-      {/* Error Alert */}
-      {error && (
-        <div className="mx-4 mt-4">
-          <Alert variant="destructive" className="relative">
-            <AlertDescription className="pr-8">{error}</AlertDescription>
-            <button
-              onClick={() => setError(null)}
-              className="absolute top-3 right-3 text-destructive-foreground/70 hover:text-destructive-foreground"
-              title="Dismiss error"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </Alert>
-        </div>
-      )}
+        {/* Error Alert */}
+        {error && (
+          <div className="mx-4 mt-4">
+            <Alert variant="destructive" className="relative">
+              <AlertDescription className="pr-8">{error}</AlertDescription>
+              <button
+                onClick={() => setError(null)}
+                className="absolute top-3 right-3 text-destructive-foreground/70 hover:text-destructive-foreground"
+                title="Dismiss error"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </Alert>
+          </div>
+        )}
 
-      {/* Tab Layout with Content */}
-      <TabLayout defaultTab="image">
-        <TabsContent value="image" className="flex-1 m-0 h-full">
-          <ImageGenerationForm
-            imagePrompts={imagePrompts}
-            setImagePrompts={setImagePrompts}
-            aspectRatio={aspectRatio}
-            setAspectRatio={setAspectRatio}
-            outputsPerPrompt={outputsPerPrompt}
-            setOutputsPerPrompt={setOutputsPerPrompt}
-            generatedImages={generatedImages}
-            isLoading={isLoading}
-            onGenerate={handleGenerateImages}
-            status={status}
-            subjectImageIds={subjectImageIds}
-            modelImageId={modelImageId}
-            styleImageId={styleImageId}
-            onSubjectImagesChange={setSubjectImageIds}
-            onModelImageChange={setModelImageId}
-            onStyleImageChange={setStyleImageId}
-            selectedPromptId={selectedPromptId}
-            onPromptChange={setSelectedPromptId}
-          />
-        </TabsContent>
+        {/* Tab Layout with Content */}
+        <TabLayout defaultTab="image">
+          <TabsContent value="image" forceMount className="flex-1 m-0 h-full data-[state=inactive]:hidden">
+            <ImageGenerationForm
+              imagePrompts={imagePrompts}
+              setImagePrompts={setImagePrompts}
+              aspectRatio={aspectRatio}
+              setAspectRatio={setAspectRatio}
+              outputsPerPrompt={outputsPerPrompt}
+              setOutputsPerPrompt={setOutputsPerPrompt}
+              generatedImages={generatedImages}
+              isLoading={isLoading}
+              onGenerate={handleGenerateImages}
+              status={status}
+              subjectImageIds={subjectImageIds}
+              modelImageId={modelImageId}
+              styleImageId={styleImageId}
+              onSubjectImagesChange={setSubjectImageIds}
+              onModelImageChange={setModelImageId}
+              onStyleImageChange={setStyleImageId}
+              selectedPromptId={selectedPromptId}
+              onPromptChange={setSelectedPromptId}
+            />
+          </TabsContent>
 
-        <TabsContent value="video" className="flex-1 m-0 h-full">
-          <VideoGenerationForm
-            videoPrompt={videoPrompt}
-            setVideoPrompt={setVideoPrompt}
-            videoType={videoType}
-            setVideoType={setVideoType}
-            videoModel={videoModel}
-            setVideoModel={setVideoModel}
-            isLoading={isLoading}
-            onGenerate={handleGenerateVideo}
-            status={status}
-          />
-        </TabsContent>
+          <TabsContent value="video" forceMount className="flex-1 m-0 h-full data-[state=inactive]:hidden">
+            <VideoGenerationForm
+              videoPrompt={videoPrompt}
+              setVideoPrompt={setVideoPrompt}
+              videoType={videoType}
+              setVideoType={setVideoType}
+              videoModel={videoModel}
+              setVideoModel={setVideoModel}
+              isLoading={isLoading}
+              onGenerate={handleGenerateVideo}
+              status={status}
+            />
+          </TabsContent>
 
-        <TabsContent value="activity" className="flex-1 m-0 h-full">
-          <ActivityLog
-            activities={activities}
-            onClear={() => setActivities([])}
-          />
-        </TabsContent>
-      </TabLayout>
-    </div>
+          <TabsContent value="library" forceMount className="flex-1 m-0 h-full data-[state=inactive]:hidden">
+            <MediaLibrary />
+          </TabsContent>
+
+          <TabsContent value="activity" forceMount className="flex-1 m-0 h-full data-[state=inactive]:hidden">
+            <ActivityLog
+              activities={activities}
+              onClear={() => setActivities([])}
+            />
+          </TabsContent>
+        </TabLayout>
+      </div>
+    </MediaProvider>
   );
 };
 

@@ -185,6 +185,14 @@ export const fetchMediaDetails = async (params: MediaDetailParams): Promise<Medi
 };
 
 /**
+ * Refresh the Flow tab to show updated content
+ * Useful after image/video generation to see results in Flow UI
+ */
+export const refreshFlowTab = async (): Promise<void> => {
+  return await callFlowAPI('refresh_flow_tab');
+};
+
+/**
  * Flow API Service class for managing connections and requests
  */
 export class FlowApiService {
@@ -233,6 +241,10 @@ export class FlowApiService {
 
   async fetchMediaDetails(params: MediaDetailParams): Promise<MediaDetailResponse> {
     return await fetchMediaDetails(params);
+  }
+
+  async refreshFlowTab(): Promise<void> {
+    return await refreshFlowTab();
   }
 }
 

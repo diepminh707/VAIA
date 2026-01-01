@@ -12,6 +12,7 @@ import {
   testConnection,
   generateImages,
   generateVideo,
+  refreshFlowTab,
   type ConnectionStatus,
 } from '@/services/flowApi';
 import type { Activity } from '@/services/activityLogger';
@@ -165,6 +166,15 @@ const SidePanel: React.FC = () => {
         setGeneratedImages(imageUrls);
         addActivity(`✅ Generated ${imageUrls.length} image(s) successfully`, 'success');
         console.log('[VAIA] Generated image URLs:', imageUrls);
+
+        // Refresh Flow tab to show updated content
+        try {
+          await refreshFlowTab();
+          addActivity('🔄 Flow tab refreshed', 'info');
+        } catch (refreshError) {
+          console.warn('[VAIA] Failed to refresh Flow tab:', refreshError);
+          // Don't fail the whole operation if refresh fails
+        }
       } else {
         addActivity('⚠️ No images in response', 'warning');
         console.log('[VAIA] Full response:', result);

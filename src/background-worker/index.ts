@@ -158,6 +158,34 @@ chrome.runtime.onMessage.addListener(
 
         console.log(`[VAIA] 📤 Sending message to tab ID: ${flowTab.id}`);
 
+        // Special handling for refresh_flow_tab command - reload the tab directly
+        if (flowMessage.payload.command === 'refresh_flow_tab') {
+          chrome.tabs.reload(flowTab.id, {}, () => {
+            if (chrome.runtime.lastError) {
+              const errorResponse: FlowAPIResponse = {
+                type: 'flow_api_response',
+                payload: {
+                  requestId,
+                  success: false,
+                  error: `Failed to refresh Flow tab: ${chrome.runtime.lastError.message}`,
+                },
+              };
+              sendResponse(errorResponse);
+            } else {
+              console.log(`[VAIA] ✅ Flow tab ${flowTab.id} refreshed successfully`);
+              const successResponse: FlowAPIResponse = {
+                type: 'flow_api_response',
+                payload: {
+                  requestId,
+                  success: true,
+                  result: { refreshed: true },
+                },
+              };
+              sendResponse(successResponse);
+            }
+          });
+          return;
+        }
 
         // Forward to content script which will communicate with injected script
         chrome.tabs.sendMessage(flowTab.id, flowMessage, (response: FlowAPIResponse) => {
